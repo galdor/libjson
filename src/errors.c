@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,4 +46,38 @@ json_set_error(const char *fmt, ...) {
 
     memcpy(json_error_buf, buf, (size_t)ret);
     json_error_buf[ret] = '\0';
+}
+
+void
+json_set_error_invalid_character(unsigned char c, const char *fmt, ...) {
+    char buf[JSON_ERROR_BUFSZ];
+    va_list ap;
+    char *ptr;
+    size_t len, prefix_len, msg_len;
+    int ret;
+
+    if (isprint(c)) {
+        ret = snprintf(buf, JSON_ERROR_BUFSZ, "invalid character '%c'", c);
+    } else {
+        ret = snprintf(buf, JSON_ERROR_BUFSZ, "invalid character \\%hhu", c);
+    }
+
+    prefix_len = (size_t)ret;
+    if (prefix_len >= JSON_ERROR_BUFSZ)
+        return;
+
+    ptr = buf + prefix_len;
+    len = JSON_ERROR_BUFSZ - prefix_len;
+
+    va_start(ap, fmt);
+    ret = vsnprintf(ptr, len, fmt, ap);
+    va_end(ap);
+
+    msg_len = (size_t)ret;
+    len = prefix_len + msg_len;
+    if (len >= JSON_ERROR_BUFSZ)
+        len = JSON_ERROR_BUFSZ - 1;
+
+    memcpy(json_error_buf, buf, len);
+    json_error_buf[len] = '\0';
 }

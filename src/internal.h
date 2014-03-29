@@ -19,6 +19,8 @@
 
 void json_set_error(const char *fmt, ...)
     __attribute__((format(printf, 1, 2)));
+void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
 void *json_malloc(size_t sz);
 void json_free(void *ptr);

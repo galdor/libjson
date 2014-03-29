@@ -14,18 +14,23 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "json.h"
 
 static void json_die(const char *, ...);
 static void json_usage(const char *, int);
+static void json_validate_file(const char *);
 
 int
 main(int argc, char **argv) {
-    int opt;
+    const char *filename;
+    int opt, nb_opts;
 
     opterr = 0;
     while ((opt = getopt(argc, argv, "h")) != -1) {
@@ -39,12 +44,20 @@ main(int argc, char **argv) {
         }
     }
 
+    nb_opts = argc - optind;
+    if (nb_opts >= 1) {
+        filename = argv[optind];
+    } else {
+        filename = "-";
+    }
+
+    json_validate_file(filename);
     return 0;
 }
 
 static void
 json_usage(const char *argv0, int exit_code) {
-    printf("Usage: %s [-h]\n"
+    printf("Usage: %s [-h] <filename>\n"
             "\n"
             "Options:\n"
             "  -h display help\n",
@@ -64,4 +77,60 @@ json_die(const char *fmt, ...) {
 
     putc('\n', stderr);
     exit(1);
+}
+
+static void
+json_validate_file(const char *filename) {
+    struct json_value *value;
+    char *data;
+    size_t len, sz;
+    int fd;
+
+    if (strcmp(filename, "-") == 0) {
+        filename = "stdin";
+        fd = STDIN_FILENO;
+    } else {
+        fd = open(filename, O_RDONLY);
+        if (fd == -1)
+            json_die("cannot open %s: %s", filename, strerror(errno));
+    }
+
+    data = NULL;
+    len = 0;
+    sz = 0;
+
+    for (;;) {
+        ssize_t ret;
+
+        sz += BUFSIZ;
+        if (sz == 0) {
+            data = malloc(sz);
+            if (!data) {
+                json_die("cannot allocate %zu bytes: %s",
+                         sz, strerror(errno));
+            }
+        } else {
+            data = realloc(data, sz);
+            if (!data) {
+                json_die("cannot reallocate %zu bytes: %s",
+                         sz, strerror(errno));
+            }
+        }
+
+        ret = read(fd, data + len, BUFSIZ);
+        if (ret == -1)
+            json_die("cannot read %s: %s", filename, strerror(errno));
+        if (ret == 0)
+            break;
+
+        len += (size_t)ret;
+    }
+
+    close(fd);
+
+    if (json_parse(data, len, &value) == -1)
+        json_die("%s", json_get_error());
+
+    json_value_delete(value);
+    free(data);
 }
