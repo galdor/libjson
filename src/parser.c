@@ -46,7 +46,9 @@ static bool json_is_integer_char(int);
 static bool json_is_real_char(int);
 
 static char *json_decode_string(const char *, size_t);
-static int json_decode_unicode_sequence(const char *, char *, size_t *);
+static int json_decode_utf8_character(const char *, uint32_t *);
+static int json_decode_utf16_surrogate_pair(const char *, uint32_t *);
+static int json_write_codepoint_as_utf8(uint32_t, char *, size_t *);
 static int json_decode_hex_digit(unsigned char);
 
 int
@@ -744,23 +746,50 @@ json_decode_string(const char *buf, size_t sz) {
                 *optr++ = '\t';
                 iptr++;
                 ilen--;
-            } else if (*iptr == 'u') {
+            } else if (*iptr == 'u' || *iptr == 'U') {
                 size_t nb_written;
+                uint32_t codepoint;
 
                 iptr++;
                 ilen--;
 
-                if (ilen < 4) {
-                    json_set_error("truncated escaped character");
-                    goto error;
+                if (ilen >= 6 && iptr[4] == '\\' && iptr[5] == 'u') {
+                    if (ilen < 10) {
+                        json_set_error("truncated escaped utf16 surrogate pair");
+                        goto error;
+                    }
+
+                    if (json_decode_utf16_surrogate_pair(iptr,
+                                                         &codepoint) == -1) {
+                        goto error;
+                    }
+
+                    if (json_write_codepoint_as_utf8(codepoint, optr,
+                                                     &nb_written) == -1) {
+                        goto error;
+                    }
+
+                    iptr += 10;
+                    ilen -= 10;
+                    optr += nb_written;
+                } else {
+                    if (ilen < 4) {
+                        json_set_error("truncated escaped unicode character");
+                        goto error;
+                    }
+
+                    if (json_decode_utf8_character(iptr, &codepoint) == -1)
+                        goto error;
+
+                    if (json_write_codepoint_as_utf8(codepoint, optr,
+                                                     &nb_written) == -1) {
+                        goto error;
+                    }
+
+                    iptr += 4;
+                    ilen -= 4;
+                    optr += nb_written;
                 }
-
-                if (json_decode_unicode_sequence(iptr, optr, &nb_written) == -1)
-                    goto error;
-
-                iptr += 4;
-                ilen -= 4;
-                optr += nb_written;
             } else {
                 json_set_error("invalid escape sequence");
                 goto error;
@@ -780,10 +809,8 @@ error:
 }
 
 static int
-json_decode_unicode_sequence(const char *in, char *out, size_t *p_nb_written) {
-    size_t nb_bytes;
+json_decode_utf8_character(const char *str, uint32_t *pcodepoint) {
     int d1, d2, d3, d4;
-    uint32_t codepoint;
 
 #define JSON_READ_HEX_DIGIT(var_, c_) \
     if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {      \
@@ -792,13 +819,49 @@ json_decode_unicode_sequence(const char *in, char *out, size_t *p_nb_written) {
         return -1;                                                      \
     }
 
-    JSON_READ_HEX_DIGIT(d1, in[0]);
-    JSON_READ_HEX_DIGIT(d2, in[1]);
-    JSON_READ_HEX_DIGIT(d3, in[2]);
-    JSON_READ_HEX_DIGIT(d4, in[3]);
+    JSON_READ_HEX_DIGIT(d1, str[0]);
+    JSON_READ_HEX_DIGIT(d2, str[1]);
+    JSON_READ_HEX_DIGIT(d3, str[2]);
+    JSON_READ_HEX_DIGIT(d4, str[3]);
 #undef JSON_READ_HEX_DIGIT
 
-    codepoint = (uint32_t)((d1 << 12) | (d2 << 8) | (d3 << 4) | d4);
+    *pcodepoint = (uint32_t)((d1 << 12) | (d2 << 8) | (d3 << 4) | d4);
+    return 0;
+}
+
+static int
+json_decode_utf16_surrogate_pair(const char *str, uint32_t *pcodepoint) {
+    int d1, d2, d3, d4;
+    uint32_t hi, lo;
+
+#define JSON_READ_HEX_DIGIT(var_, c_) \
+    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {      \
+        json_set_error_invalid_character((unsigned char)c_,             \
+                                         " in unicode sequence");       \
+        return -1;                                                      \
+    }
+
+    JSON_READ_HEX_DIGIT(d1, str[0]);
+    JSON_READ_HEX_DIGIT(d2, str[1]);
+    JSON_READ_HEX_DIGIT(d3, str[2]);
+    JSON_READ_HEX_DIGIT(d4, str[3]);
+    hi = (uint32_t)((d1 << 12) | (d2 << 8) | (d3 << 4) | d4);
+
+    JSON_READ_HEX_DIGIT(d1, str[6]);
+    JSON_READ_HEX_DIGIT(d2, str[7]);
+    JSON_READ_HEX_DIGIT(d3, str[8]);
+    JSON_READ_HEX_DIGIT(d4, str[9]);
+    lo = (uint32_t)((d1 << 12) | (d2 << 8) | (d3 << 4) | d4);
+#undef JSON_READ_HEX_DIGIT
+
+    *pcodepoint = 0x010000 + (((hi - 0xd800) << 10) | (lo - 0xdc00));
+    return 0;
+}
+
+static int
+json_write_codepoint_as_utf8(uint32_t codepoint, char *out,
+                             size_t *p_nb_written) {
+    size_t nb_bytes;
 
     if (codepoint <= 0x007f) {
         nb_bytes = 1;
@@ -818,8 +881,36 @@ json_decode_unicode_sequence(const char *in, char *out, size_t *p_nb_written) {
         *out++ = (char)(0xe0 | ((codepoint >> 12) & 0x0f));
         *out++ = (char)(0x80 | ((codepoint >> 6) & 0x3f));
         *out++ = (char)(0x80 | (codepoint & 0x3f));
+    } else if (codepoint <= 0x1fffff) {
+        nb_bytes = 4;
+
+        /* 1111 0xxx    10xx xxxx    10xx xxxx    10xx xxxx */
+        *out++ = (char)(0xf0 | ((codepoint >> 18) & 0x07));
+        *out++ = (char)(0x80 | ((codepoint >> 12) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 6) & 0x3f));
+        *out++ = (char)(0x80 | (codepoint & 0x3f));
+    } else if (codepoint <= 0x3ffffff) {
+        nb_bytes = 5;
+
+        /* 1111 10xx    10xx xxxx    10xx xxxx    10xx xxxx    10xx xxxx */
+        *out++ = (char)(0xf8 | ((codepoint >> 24) & 0xfc));
+        *out++ = (char)(0x80 | ((codepoint >> 18) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 12) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 6) & 0x3f));
+        *out++ = (char)(0x80 | (codepoint & 0x3f));
+    } else if (codepoint <= 0x7fffffff) {
+        nb_bytes = 6;
+
+        /* 1111 110x    10xx xxxx    10xx xxxx    10xx xxxx    10xx xxxx
+         * 10xx xxxx */
+        *out++ = (char)(0xfc | ((codepoint >> 30) & 0x01));
+        *out++ = (char)(0x80 | ((codepoint >> 24) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 18) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 12) & 0x3f));
+        *out++ = (char)(0x80 | ((codepoint >> 6) & 0x3f));
+        *out++ = (char)(0x80 | (codepoint & 0x3f));
     } else {
-        json_set_error("unicode sequence is out of the BMP");
+        json_set_error("invalid unicode codepoint U+%X", codepoint);
         return -1;
     }
 
