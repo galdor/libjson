@@ -73,6 +73,7 @@ main(int argc, char **argv) {
 
     value = json_load_file(ifilename);
     json_write_to_file(value, ofilename, format_opts);
+    json_value_delete(value);
 
     return 0;
 }
@@ -203,4 +204,6 @@ json_write_to_file(const struct json_value *value, const char *filename,
     }
 
     close(fd);
+
+    json_free(buf);
 }
