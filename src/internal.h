@@ -17,15 +17,46 @@
 #ifndef LIBJSON_INTERNAL_H
 #define LIBJSON_INTERNAL_H
 
+/* Errors */
 void json_set_error(const char *fmt, ...)
     __attribute__((format(printf, 1, 2)));
 void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
+/* Memory */
 void *json_malloc(size_t sz);
 void json_free(void *ptr);
 void *json_calloc(size_t nb, size_t sz);
 void *json_realloc(void *ptr, size_t sz);
+
+/* JSON */
+struct json_object_entry {
+    struct json_value *key;
+    struct json_value *value;
+};
+
+struct json_object {
+    struct json_object_entry *entries;
+    size_t nb_entries;
+};
+
+struct json_array {
+    struct json_value **elements;
+    size_t nb_elements;
+};
+
+struct json_value {
+    enum json_type type;
+
+    union {
+        struct json_object object;
+        struct json_array array;
+        int64_t integer;
+        double real;
+        char *string;
+        bool boolean;
+    } u;
+};
 
 #endif
 

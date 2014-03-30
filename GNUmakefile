@@ -54,7 +54,7 @@ tests_BIN= $(subst .o,,$(tests_OBJ))
 
 $(tests_BIN): CFLAGS+= -Isrc
 $(tests_BIN): LDFLAGS+= -L.
-$(tests_BIN): LDLIBS+= -ljson
+$(tests_BIN): LDLIBS+= -ljson -lbuffer
 
 # Target: utils
 utils_SRC= $(wildcard utils/*.c)
@@ -63,7 +63,7 @@ utils_BIN= $(subst .o,,$(utils_OBJ))
 
 $(utils_BIN): CFLAGS+= -Isrc
 $(utils_BIN): LDFLAGS+= -L.
-$(utils_BIN): LDLIBS+= -ljson
+$(utils_BIN): LDLIBS+= -ljson -lbuffer
 
 # Target: doc
 doc_SRC= $(wildcard doc/*.mkd)

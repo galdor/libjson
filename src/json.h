@@ -49,6 +49,13 @@ struct json_value;
 int json_parse(const char *, size_t, struct json_value **);
 void json_value_delete(struct json_value *);
 
+enum json_format_option {
+    JSON_FORMAT_INDENT         = 0x01,
+    JSON_FORMAT_ESCAPE_SOLIDUS = 0x02,
+};
+
+char *json_value_format(const struct json_value *, int, size_t *);
+
 struct json_value *json_object_new(void);
 size_t json_object_get_nb_entries(struct json_value *);
 int json_object_add_entry(struct json_value *, struct json_value *,

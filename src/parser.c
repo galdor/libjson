@@ -21,34 +21,6 @@
 #include "json.h"
 #include "internal.h"
 
-struct json_object_entry {
-    struct json_value *key;
-    struct json_value *value;
-};
-
-struct json_object {
-    struct json_object_entry *entries;
-    size_t nb_entries;
-};
-
-struct json_array {
-    struct json_value **elements;
-    size_t nb_elements;
-};
-
-struct json_value {
-    enum json_type type;
-
-    union {
-        struct json_object object;
-        struct json_array array;
-        int64_t integer;
-        double real;
-        char *string;
-        bool boolean;
-    } u;
-};
-
 static struct json_value *json_value_new(enum json_type);
 
 struct json_parser {
