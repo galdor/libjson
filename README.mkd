@@ -1,0 +1,10 @@
+# libjson
+
+## Description
+
+`libjson` is a small C library providing a JSON parser and formatter.
+
+## Contact
+
+If you have found a bug, have an idea or a question, email me at
+<khaelin@gmail.com>.
