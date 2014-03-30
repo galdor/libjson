@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <alloca.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,8 +25,8 @@
 #include <buffer.h>
 
 struct json_format_ctx {
-    int opts;
-    int indent;
+    uint32_t opts;
+    size_t indent;
 };
 
 static int json_format_value(const struct json_value *, struct bf_buffer *,
@@ -46,13 +47,15 @@ static int json_format_boolean(bool, struct bf_buffer *,
 static int json_format_null(struct bf_buffer *,
                             struct json_format_ctx *);
 
+static int json_format_indent(struct bf_buffer *, struct json_format_ctx *);
+
 static bool json_utf8_is_leading_byte(unsigned char);
 static bool json_utf8_is_continuation_byte(unsigned char);
 static size_t json_utf8_sequence_length(unsigned char);
 static int json_utf8_decode_codepoint(const char *, uint32_t *, const char **);
 
 char *
-json_value_format(const struct json_value *value, int opts, size_t *plen) {
+json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     struct json_format_ctx ctx;
     struct bf_buffer *buf;
     char *text;
@@ -121,6 +124,15 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
         return -1;
     }
 
+    if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (bf_buffer_add_string(buf, "\n") == -1) {
+            json_set_error("%s", bf_get_error());
+            return -1;
+        }
+
+        ctx->indent += 2;
+    }
+
     for (size_t i = 0; i < object->nb_entries; i++) {
         struct json_object_entry *entry;
 
@@ -131,6 +143,18 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
                 json_set_error("%s", bf_get_error());
                 return -1;
             }
+
+            if (ctx->opts & JSON_FORMAT_INDENT) {
+                if (bf_buffer_add_string(buf, "\n") == -1) {
+                    json_set_error("%s", bf_get_error());
+                    return -1;
+                }
+            }
+        }
+
+        if (ctx->opts & JSON_FORMAT_INDENT) {
+            if (json_format_indent(buf, ctx) == -1)
+                return -1;
         }
 
         if (json_format_value(entry->key, buf, ctx) == -1)
@@ -142,6 +166,18 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
         }
 
         if (json_format_value(entry->value, buf, ctx) == -1)
+            return -1;
+    }
+
+    if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (bf_buffer_add_string(buf, "\n") == -1) {
+            json_set_error("%s", bf_get_error());
+            return -1;
+        }
+
+        ctx->indent -= 2;
+
+        if (json_format_indent(buf, ctx) == -1)
             return -1;
     }
 
@@ -161,6 +197,15 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
         return -1;
     }
 
+    if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (bf_buffer_add_string(buf, "\n") == -1) {
+            json_set_error("%s", bf_get_error());
+            return -1;
+        }
+
+        ctx->indent += 2;
+    }
+
     for (size_t i = 0; i < array->nb_elements; i++) {
         struct json_value *child;
 
@@ -171,9 +216,33 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
                 json_set_error("%s", bf_get_error());
                 return -1;
             }
+
+            if (ctx->opts & JSON_FORMAT_INDENT) {
+                if (bf_buffer_add_string(buf, "\n") == -1) {
+                    json_set_error("%s", bf_get_error());
+                    return -1;
+                }
+            }
+        }
+
+        if (ctx->opts & JSON_FORMAT_INDENT) {
+            if (json_format_indent(buf, ctx) == -1)
+                return -1;
         }
 
         if (json_format_value(child, buf, ctx) == -1)
+            return -1;
+    }
+
+    if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (bf_buffer_add_string(buf, "\n") == -1) {
+            json_set_error("%s", bf_get_error());
+            return -1;
+        }
+
+        ctx->indent -= 2;
+
+        if (json_format_indent(buf, ctx) == -1)
             return -1;
     }
 
@@ -252,14 +321,14 @@ json_format_string(const char *string, struct bf_buffer *buf,
                 snprintf(tmp, sizeof(tmp), "\\u%04x", codepoint);
                 ret = bf_buffer_add(buf, tmp, 6);
             } else {
-                /* UTF-16 surrogate pair */
-                /* \uxxxx\uxxxx */
                 uint32_t hi, lo;
 
+                /* UTF-16 surrogate pair */
                 codepoint -= 0x010000;
                 hi = (codepoint >> 10) + 0xd800;
                 lo = (codepoint & 0x3ff) + 0xdc00;
 
+                /* \uxxxx\uxxxx */
                 snprintf(tmp, sizeof(tmp), "\\u%04x\\u%04x", hi, lo);
                 ret = bf_buffer_add(buf, tmp, 12);
             }
@@ -388,5 +457,27 @@ json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
 
     *pcodepoint = codepoint;
     *end = ptr + length;
+    return 0;
+}
+
+static int
+json_format_indent(struct bf_buffer *buf, struct json_format_ctx *ctx) {
+    char *tmp;
+
+    if (ctx->indent == 0) {
+        return 0;
+    } else if (ctx->indent > 0xffff) {
+        json_set_error("cannot indent text: nesting depth too high");
+        return -1;
+    }
+
+    tmp = alloca(ctx->indent);
+    memset(tmp, ' ', ctx->indent);
+
+    if (bf_buffer_add(buf, tmp, ctx->indent) == -1) {
+        json_set_error("%s", bf_get_error());
+        return -1;
+    }
+
     return 0;
 }
