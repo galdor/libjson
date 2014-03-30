@@ -26,19 +26,31 @@
 static void json_die(const char *, ...);
 static void json_usage(const char *, int);
 static struct json_value *json_load_file(const char *);
-static void json_write_to_file(const struct json_value *, const char *);
+static void json_write_to_file(const struct json_value *, const char *,
+                               uint32_t);
 
 int
 main(int argc, char **argv) {
     const char *ifilename, *ofilename;
     struct json_value *value;
     int opt, nb_opts;
+    uint32_t format_opts;
+
+    format_opts = 0;
 
     opterr = 0;
-    while ((opt = getopt(argc, argv, "h")) != -1) {
+    while ((opt = getopt(argc, argv, "his")) != -1) {
         switch (opt) {
         case 'h':
             json_usage(argv[0], 0);
+            break;
+
+        case 'i':
+            format_opts |= JSON_FORMAT_INDENT;
+            break;
+
+        case 's':
+            format_opts |= JSON_FORMAT_ESCAPE_SOLIDUS;
             break;
 
         case '?':
@@ -60,17 +72,19 @@ main(int argc, char **argv) {
     }
 
     value = json_load_file(ifilename);
-    json_write_to_file(value, ofilename);
+    json_write_to_file(value, ofilename, format_opts);
 
     return 0;
 }
 
 static void
 json_usage(const char *argv0, int exit_code) {
-    printf("Usage: %s [-h] <filename>\n"
+    printf("Usage: %s [-his] <filename>\n"
             "\n"
             "Options:\n"
-            "  -h display help\n",
+            "  -h display help\n"
+            "  -i indent output\n"
+            "  -s escape solidus characters\n",
             argv0);
     exit(exit_code);
 }
@@ -147,13 +161,14 @@ json_load_file(const char *filename) {
 }
 
 static void
-json_write_to_file(const struct json_value *value, const char *filename) {
+json_write_to_file(const struct json_value *value, const char *filename,
+                   uint32_t opts) {
     const char *ptr;
     size_t len;
     char *buf;
     int fd;
 
-    buf = json_value_format(value, JSON_FORMAT_INDENT, &len);
+    buf = json_value_format(value, opts, &len);
     if (!buf)
         json_die("cannot format value: %s", json_get_error());
 
