@@ -753,9 +753,19 @@ json_decode_string(const char *buf, size_t sz) {
                 iptr++;
                 ilen--;
 
-                if (ilen >= 6 && iptr[4] == '\\' && iptr[5] == 'u') {
-                    if (ilen < 10) {
-                        json_set_error("truncated escaped utf16 surrogate pair");
+                if (ilen < 4) {
+                    json_set_error("truncated escaped unicode character");
+                    goto error;
+                }
+
+                if (json_decode_utf8_character(iptr, &codepoint) == -1)
+                    goto error;
+
+                if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
+                    /* UTF-16 surrogate pair */
+                    if (ilen < 10 || iptr[4] != '\\'
+                     || (iptr[5] != 'u' && iptr[5] != 'U')) {
+                        json_set_error("truncated escaped surrogate pair");
                         goto error;
                     }
 
@@ -773,14 +783,6 @@ json_decode_string(const char *buf, size_t sz) {
                     ilen -= 10;
                     optr += nb_written;
                 } else {
-                    if (ilen < 4) {
-                        json_set_error("truncated escaped unicode character");
-                        goto error;
-                    }
-
-                    if (json_decode_utf8_character(iptr, &codepoint) == -1)
-                        goto error;
-
                     if (json_write_codepoint_as_utf8(codepoint, optr,
                                                      &nb_written) == -1) {
                         goto error;
