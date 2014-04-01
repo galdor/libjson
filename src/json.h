@@ -54,8 +54,11 @@ enum json_type {
 
 struct json_value;
 
-int json_parse(const char *, size_t, struct json_value **);
+struct json_value *json_parse(const char *, size_t);
+
 void json_value_delete(struct json_value *);
+
+enum json_type json_value_type(const struct json_value *);
 
 enum json_format_option {
     JSON_FORMAT_INDENT         = 0x01,
@@ -65,22 +68,28 @@ enum json_format_option {
 char *json_value_format(const struct json_value *, uint32_t, size_t *);
 
 struct json_value *json_object_new(void);
-size_t json_object_get_nb_entries(struct json_value *);
+size_t json_object_nb_entries(struct json_value *);
+struct json_value *json_object_entry(struct json_value *, const char *);
 int json_object_add_entry(struct json_value *, struct json_value *,
                           struct json_value *);
 
 struct json_value *json_array_new(void);
-size_t json_array_get_nb_elements(struct json_value *);
+size_t json_array_nb_elements(struct json_value *);
+struct json_value *json_array_element(struct json_value *, size_t);
 int json_array_add_element(struct json_value *, struct json_value *);
 
 struct json_value *json_integer_new(int64_t);
+int64_t json_integer_value(struct json_value *);
 
 struct json_value *json_real_new(double);
+double json_real_value(struct json_value *);
 
 struct json_value *json_string_new(const char *);
 struct json_value *json_string_new2(const char *, size_t);
+const char *json_string_value(struct json_value *);
 
 struct json_value *json_boolean_new(bool);
+bool json_boolean_value(struct json_value *);
 
 struct json_value *json_null_new(void);
 

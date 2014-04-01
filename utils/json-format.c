@@ -153,7 +153,8 @@ json_load_file(const char *filename) {
 
     close(fd);
 
-    if (json_parse(data, len, &value) == -1)
+    value = json_parse(data, len);
+    if (!value)
         json_die("%s", json_get_error());
 
     free(data);

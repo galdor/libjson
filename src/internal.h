@@ -52,5 +52,7 @@ struct json_value {
     } u;
 };
 
+struct json_value *json_value_new(enum json_type);
+
 #endif
 

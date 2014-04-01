@@ -21,8 +21,6 @@
 #include "json.h"
 #include "internal.h"
 
-static struct json_value *json_value_new(enum json_type);
-
 struct json_parser {
     const char *ptr;
     size_t len;
@@ -51,8 +49,8 @@ static int json_decode_utf16_surrogate_pair(const char *, uint32_t *);
 static int json_write_codepoint_as_utf8(uint32_t, char *, size_t *);
 static int json_decode_hex_digit(unsigned char);
 
-int
-json_parse(const char *buf, size_t sz, struct json_value **pvalue) {
+struct json_value *
+json_parse(const char *buf, size_t sz) {
     struct json_parser parser;
     struct json_value *value;
 
@@ -61,220 +59,13 @@ json_parse(const char *buf, size_t sz, struct json_value **pvalue) {
     parser.len = sz;
 
     if (json_parse_value(&parser, &value) == -1)
-        return -1;
+        return NULL;
 
     if (value->type != JSON_OBJECT && value->type != JSON_ARRAY) {
         json_set_error("top-level value is neither an object nor an array");
         json_value_delete(value);
-        return -1;
-    }
-
-    *pvalue = value;
-    return 0;
-}
-
-void
-json_value_delete(struct json_value *value) {
-    if (!value)
-        return;
-
-    switch (value->type) {
-    case JSON_OBJECT:
-        for (size_t i = 0; i < value->u.object.nb_entries; i++) {
-            json_value_delete(value->u.object.entries[i].key);
-            json_value_delete(value->u.object.entries[i].value);
-        }
-        json_free(value->u.object.entries);
-        break;
-
-    case JSON_ARRAY:
-        for (size_t i = 0; i < value->u.array.nb_elements; i++)
-            json_value_delete(value->u.array.elements[i]);
-        json_free(value->u.array.elements);
-        break;
-
-    case JSON_STRING:
-        json_free(value->u.string);
-        break;
-
-    default:
-        break;
-    }
-
-    memset(value, 0, sizeof(struct json_value));
-    json_free(value);
-}
-
-struct json_value *
-json_object_new(void) {
-    return json_value_new(JSON_OBJECT);
-}
-
-size_t
-json_object_get_nb_entries(struct json_value *value) {
-    return value->u.object.nb_entries;
-}
-
-int
-json_object_add_entry(struct json_value *object_value, struct json_value *key,
-                      struct json_value *value) {
-    struct json_object *object;
-    struct json_object_entry *entries;
-    struct json_object_entry *entry;
-    size_t nb_entries;
-
-    object = &object_value->u.object;
-
-    if (object->nb_entries == 0) {
-        nb_entries = 1;
-        entries = json_malloc(sizeof(struct json_object_entry));
-    } else {
-        nb_entries = object->nb_entries + 1;
-        entries = json_realloc(object->entries,
-                               nb_entries * sizeof(struct json_object_entry));
-    }
-
-    if (!entries)
-        return -1;
-
-    object->entries = entries;
-    object->nb_entries = nb_entries;
-
-    entry = &object->entries[object->nb_entries - 1];
-    entry->key = key;
-    entry->value = value;
-
-    return 0;
-}
-
-struct json_value *
-json_array_new(void) {
-    return json_value_new(JSON_ARRAY);
-}
-
-size_t
-json_array_get_nb_elements(struct json_value *value) {
-    if (value->type != JSON_ARRAY)
-        return 0;
-
-    return value->u.array.nb_elements;
-}
-
-int
-json_array_add_element(struct json_value *value, struct json_value *element) {
-    struct json_array *array;
-    struct json_value **elements;
-    size_t nb_elements;
-
-    array = &value->u.array;
-
-    if (array->nb_elements == 0) {
-        nb_elements = 1;
-        elements = json_malloc(sizeof(struct json_value *));
-    } else {
-        nb_elements = array->nb_elements + 1;
-        elements = json_realloc(array->elements,
-                                nb_elements * sizeof(struct json_value *));
-    }
-
-    if (!elements)
-        return -1;
-
-    array->elements = elements;
-    array->nb_elements = nb_elements;
-
-    array->elements[array->nb_elements - 1] = element;
-    return 0;
-}
-
-struct json_value *
-json_integer_new(int64_t integer) {
-    struct json_value *value;
-
-    value = json_value_new(JSON_INTEGER);
-    if (!value)
-        return NULL;
-
-    value->u.integer = integer;
-    return value;
-}
-
-struct json_value *
-json_real_new(double real) {
-    struct json_value *value;
-
-    value = json_value_new(JSON_REAL);
-    if (!value)
-        return NULL;
-
-    value->u.real = real;
-    return value;
-}
-
-struct json_value *
-json_string_new(const char *string) {
-    struct json_value *value;
-    size_t length;
-
-    value = json_value_new(JSON_STRING);
-    if (!value)
-        return NULL;
-
-    length = strlen(string);
-
-    value->u.string = json_malloc(length + 1);
-    if (!value->u.string) {
-        json_value_delete(value);
         return NULL;
     }
-
-    memcpy(value->u.string, string, length + 1);
-    return value;
-}
-
-struct json_value *
-json_string_new2(const char *string, size_t length) {
-    struct json_value *value;
-
-    value = json_value_new(JSON_STRING);
-    if (!value)
-        return NULL;
-
-    value->u.string = json_malloc(length + 1);
-    if (!value->u.string) {
-        json_value_delete(value);
-        return NULL;
-    }
-
-    memcpy(value->u.string, string, length + 1);
-    return value;
-}
-
-struct json_value *
-json_boolean_new(bool boolean) {
-    struct json_value *value;
-
-    value = json_value_new(JSON_BOOLEAN);
-    if (!value)
-        return NULL;
-
-    value->u.boolean = boolean;
-    return value;
-}
-
-struct json_value *
-json_null_new() {
-    return json_value_new(JSON_NULL);
-}
-
-static struct json_value *
-json_value_new(enum json_type type) {
-    struct json_value *value;
-
-    value = json_malloc(sizeof(struct json_value));
-    memset(value, 0, sizeof(struct json_value));
-
-    value->type = type;
 
     return value;
 }
