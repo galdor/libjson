@@ -299,7 +299,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
     start = parser->ptr;
 
     if (type == JSON_INTEGER) {
-        char tmp[20]; /* INT64_MAX contains 19 digits */
+        char tmp[21]; /* INT64_MIN contains 20 digits */
         long long llval;
 
         while (parser->len > 0) {
