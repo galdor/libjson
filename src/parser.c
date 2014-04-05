@@ -391,9 +391,17 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
     start = parser->ptr;
 
     while (parser->len > 0) {
-        if (*parser->ptr == '"') {
-            if (*(parser->ptr - 1) != '\\')
-                break;
+        if (*parser->ptr == '\\') {
+            if (parser->len < 2) {
+                json_set_error("truncated escape sequence");
+                json_value_delete(value);
+                return -1;
+            }
+
+            json_parser_skip(parser, 2);
+            continue;
+        } else if (*parser->ptr == '"') {
+            break;
         }
 
         json_parser_skip(parser, 1);
