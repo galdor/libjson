@@ -79,7 +79,8 @@ json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
         goto error;
     }
 
-    *plen = bf_buffer_length(buf);
+    if (plen)
+        *plen = bf_buffer_length(buf);
 
     bf_buffer_delete(buf);
     return text;
