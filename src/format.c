@@ -115,6 +115,9 @@ json_format_value(const struct json_value *value, struct bf_buffer *buf,
     case JSON_NULL:
         return json_format_null(buf, ctx);
     }
+
+    json_set_error("unknown json value type %d", value->type);
+    return -1;
 }
 
 static int

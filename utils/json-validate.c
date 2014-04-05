@@ -15,6 +15,7 @@
  */
 
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -23,7 +24,8 @@
 
 #include "json.h"
 
-static void json_die(const char *, ...);
+static void json_die(const char *, ...)
+    __attribute__ ((noreturn));
 static void json_usage(const char *, int);
 static void json_validate_file(const char *);
 

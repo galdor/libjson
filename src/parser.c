@@ -103,7 +103,7 @@ json_parse_value(struct json_parser *parser, struct json_value **pvalue) {
     } else if (json_is_number_first_char((unsigned char)*parser->ptr)) {
         return json_parse_number(parser, pvalue);
     } else {
-        json_set_error_invalid_character((unsigned char)*parser->ptr, "");
+        json_set_error_invalid_character((unsigned char)*parser->ptr, " ");
         return -1;
     }
 }
