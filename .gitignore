@@ -6,3 +6,5 @@ session.vim
 
 /utils/json-format
 /utils/json-validate
+
+/tests/json
