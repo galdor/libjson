@@ -129,8 +129,14 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
 
         json_parser_skip_ws(parser);
 
-        if (*parser->ptr == '}')
+        if (*parser->ptr == '}') {
+            if (object_value->u.object.nb_entries > 0) {
+                json_set_error("truncated object");
+                goto error;
+            }
+
             break;
+        }
 
         ret = json_parse_value(parser, &key);
         if (ret == -1)
@@ -180,8 +186,6 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
                                              " in object");
             goto error;
         }
-
-        json_parser_skip(parser, 1);
     }
 
     if (*parser->ptr != '}') {
@@ -219,8 +223,14 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
 
         json_parser_skip_ws(parser);
 
-        if (*parser->ptr == ']')
+        if (*parser->ptr == ']') {
+            if (value->u.array.nb_elements > 0) {
+                json_set_error("truncated array");
+                goto error;
+            }
+
             break;
+        }
 
         ret = json_parse_value(parser, &element);
         if (ret == -1)
