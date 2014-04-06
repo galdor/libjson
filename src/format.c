@@ -40,7 +40,7 @@ static int json_format_integer(int64_t, struct bf_buffer *,
                                struct json_format_ctx *);
 static int json_format_real(double, struct bf_buffer *,
                             struct json_format_ctx *);
-static int json_format_string(const char *, struct bf_buffer *,
+static int json_format_string(const char *, size_t, struct bf_buffer *,
                               struct json_format_ctx *);
 static int json_format_boolean(bool, struct bf_buffer *,
                                struct json_format_ctx *);
@@ -107,7 +107,7 @@ json_format_value(const struct json_value *value, struct bf_buffer *buf,
         return json_format_real(value->u.real, buf, ctx);
 
     case JSON_STRING:
-        return json_format_string(value->u.string, buf, ctx);
+        json_format_string(value->u.string.ptr, value->u.string.len, buf, ctx);
 
     case JSON_BOOLEAN:
         return json_format_boolean(value->u.boolean, buf, ctx);
@@ -281,9 +281,10 @@ json_format_real(double real, struct bf_buffer *buf,
 }
 
 static int
-json_format_string(const char *string, struct bf_buffer *buf,
+json_format_string(const char *string, size_t length, struct bf_buffer *buf,
                    struct json_format_ctx *ctx) {
     const char *ptr;
+    size_t len;
 
     if (bf_buffer_add_string(buf, "\"") == -1) {
         json_set_error("%s", bf_get_error());
@@ -291,7 +292,9 @@ json_format_string(const char *string, struct bf_buffer *buf,
     }
 
     ptr = string;
-    while (*ptr != '\0') {
+    len = length;
+
+    while (len > 0) {
         int ret;
 
         if (*ptr == '"') {
@@ -350,6 +353,7 @@ json_format_string(const char *string, struct bf_buffer *buf,
         }
 
         ptr++;
+        len--;
     }
 
     if (bf_buffer_add_string(buf, "\"") == -1) {

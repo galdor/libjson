@@ -47,7 +47,10 @@ struct json_value {
         struct json_array array;
         int64_t integer;
         double real;
-        char *string;
+        struct {
+            char *ptr;
+            size_t len;
+        } string;
         bool boolean;
     } u;
 };

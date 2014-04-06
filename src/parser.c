@@ -43,7 +43,7 @@ static bool json_is_number_char(int);
 static bool json_is_integer_char(int);
 static bool json_is_real_char(int);
 
-static char *json_decode_string(const char *, size_t);
+static char *json_decode_string(const char *, size_t, size_t *);
 static int json_decode_utf8_character(const char *, uint32_t *);
 static int json_decode_utf16_surrogate_pair(const char *, uint32_t *);
 static int json_write_codepoint_as_utf8(uint32_t, char *, size_t *);
@@ -382,6 +382,7 @@ static int
 json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
     struct json_value *value;
     const char *start;
+    size_t toklen;
 
     value = json_value_new(JSON_STRING);
     if (!value)
@@ -413,8 +414,11 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
         return -1;
     }
 
-    value->u.string = json_decode_string(start, (size_t)(parser->ptr - start));
-    if (!value->u.string) {
+    toklen = (size_t)(parser->ptr - start);
+
+    value->u.string.ptr = json_decode_string(start, toklen,
+                                             &value->u.string.len);
+    if (!value->u.string.ptr) {
         json_value_delete(value);
         return -1;
     }
@@ -497,7 +501,7 @@ json_is_real_char(int c) {
 }
 
 static char *
-json_decode_string(const char *buf, size_t sz) {
+json_decode_string(const char *buf, size_t sz, size_t *plen) {
     const char *iptr;
     char *string, *optr;
     size_t ilen = sz;
@@ -602,6 +606,8 @@ json_decode_string(const char *buf, size_t sz) {
     }
 
     *optr = '\0';
+    *plen = (size_t)(optr - string);
+
     return string;
 
 error:

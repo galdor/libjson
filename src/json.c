@@ -54,7 +54,7 @@ json_value_delete(struct json_value *value) {
         break;
 
     case JSON_STRING:
-        json_free(value->u.string);
+        json_free(value->u.string.ptr);
         break;
 
     default:
@@ -80,8 +80,24 @@ json_object_nb_entries(struct json_value *value) {
     return value->u.object.nb_entries;
 }
 
+bool
+json_object_has_entry(struct json_value *value, const char *key) {
+    return json_object_entry2(value, key, strlen(key)) != NULL;
+}
+
+bool
+json_object_has_entry2(struct json_value *value, const char *key, size_t len) {
+    return json_object_entry2(value, key, len) != NULL;
+}
+
 struct json_value *
 json_object_entry(struct json_value *value, const char *key) {
+    return json_object_entry2(value, key, strlen(key));
+}
+
+struct json_value *
+json_object_entry2(struct json_value *value,
+                   const char *key, size_t len) {
     struct json_object *object;
 
     object = &value->u.object;
@@ -91,7 +107,10 @@ json_object_entry(struct json_value *value, const char *key) {
 
         entry = object->entries + i;
 
-        if (strcmp(entry->key->u.string, key) == 0)
+        if (entry->key->u.string.len != len)
+            continue;
+
+        if (memcmp(entry->key->u.string.ptr, key, len) == 0)
             return entry->value;
     }
 
@@ -231,20 +250,26 @@ json_string_new(const char *string) {
         return NULL;
 
     length = strlen(string);
+    value->u.string.len = length;
 
-    value->u.string = json_malloc(length + 1);
-    if (!value->u.string) {
+    value->u.string.ptr = json_malloc(length + 1);
+    if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;
     }
 
-    memcpy(value->u.string, string, length + 1);
+    memcpy(value->u.string.ptr, string, length + 1);
     return value;
 }
 
 const char *
 json_string_value(struct json_value *value) {
-    return value->u.string;
+    return value->u.string.ptr;
+}
+
+size_t
+json_string_length(struct json_value *value) {
+    return value->u.string.len;
 }
 
 struct json_value *
@@ -255,13 +280,15 @@ json_string_new2(const char *string, size_t length) {
     if (!value)
         return NULL;
 
-    value->u.string = json_malloc(length + 1);
-    if (!value->u.string) {
+    value->u.string.len = length;
+
+    value->u.string.ptr = json_malloc(length + 1);
+    if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;
     }
 
-    memcpy(value->u.string, string, length + 1);
+    memcpy(value->u.string.ptr, string, length + 1);
     return value;
 }
 
