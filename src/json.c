@@ -65,6 +65,87 @@ json_value_delete(struct json_value *value) {
     json_free(value);
 }
 
+struct json_value *
+json_value_clone(const struct json_value *value) {
+    switch (value->type) {
+    case JSON_OBJECT:
+    {
+        struct json_value *nvalue;
+
+        nvalue = json_object_new();
+
+        for (size_t i = 0; i < value->u.object.nb_entries; i++) {
+            struct json_value *key, *val;
+
+            key = json_value_clone(value->u.object.entries[i].key);
+            if (!key) {
+                json_value_delete(nvalue);
+                return NULL;
+            }
+
+            val = json_value_clone(value->u.object.entries[i].value);
+            if (!val) {
+                json_value_delete(key);
+                json_value_delete(nvalue);
+                return NULL;
+            }
+
+            if (json_object_add_entry(nvalue, key, val) == -1) {
+                json_value_delete(key);
+                json_value_delete(val);
+                json_value_delete(nvalue);
+                return NULL;
+            }
+        }
+
+        return nvalue;
+    }
+
+    case JSON_ARRAY:
+    {
+        struct json_value *nvalue;
+
+        nvalue = json_array_new();
+
+        for (size_t i = 0; i < value->u.array.nb_elements; i++) {
+            struct json_value *element;
+
+            element = json_value_clone(value->u.array.elements[i]);
+            if (!element) {
+                json_value_delete(nvalue);
+                return NULL;
+            }
+
+            if (json_array_add_element(nvalue, element) == -1) {
+                json_value_delete(element);
+                json_value_delete(nvalue);
+                return NULL;
+            }
+        }
+
+        return nvalue;
+    }
+
+    case JSON_INTEGER:
+        return json_integer_new(value->u.integer);
+
+    case JSON_REAL:
+        return json_real_new(value->u.real);
+
+    case JSON_STRING:
+        return json_string_new2(value->u.string.ptr, value->u.string.len);
+
+    case JSON_BOOLEAN:
+        return json_boolean_new(value->u.boolean);
+
+    case JSON_NULL:
+        return json_null_new();
+    }
+
+    json_set_error("unknown json value type %d", value->type);
+    return NULL;
+}
+
 enum json_type
 json_value_type(const struct json_value *value) {
     return value->type;

@@ -57,6 +57,7 @@ struct json_value;
 struct json_value *json_parse(const char *, size_t);
 
 void json_value_delete(struct json_value *);
+struct json_value *json_value_clone(const struct json_value *);
 
 enum json_type json_value_type(const struct json_value *);
 
