@@ -107,7 +107,8 @@ json_format_value(const struct json_value *value, struct bf_buffer *buf,
         return json_format_real(value->u.real, buf, ctx);
 
     case JSON_STRING:
-        json_format_string(value->u.string.ptr, value->u.string.len, buf, ctx);
+        return json_format_string(value->u.string.ptr, value->u.string.len,
+                                  buf, ctx);
 
     case JSON_BOOLEAN:
         return json_format_boolean(value->u.boolean, buf, ctx);
