@@ -97,7 +97,7 @@
         double expected__ = (expected_);                                      \
                                                                               \
         if (val__ != expected__) {                                            \
-            JSONT_REPORT_ERROR("%s is equal to %g instead of %g",             \
+            JSONT_REPORT_ERROR("%s is equal to %.17g instead of %.17g",       \
                                val_str__, val__, expected__);                 \
         }                                                                     \
     } while (0)

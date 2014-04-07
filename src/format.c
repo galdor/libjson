@@ -302,7 +302,7 @@ json_format_integer(int64_t integer, struct bf_buffer *buf,
 static int
 json_format_real(double real, struct bf_buffer *buf,
                  struct json_format_ctx *ctx) {
-    if (bf_buffer_add_printf(buf, "%g", real) == -1) {
+    if (bf_buffer_add_printf(buf, "%.17g", real) == -1) {
         json_set_error("%s", bf_get_error());
         return -1;
     }
