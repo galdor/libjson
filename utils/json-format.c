@@ -41,8 +41,12 @@ main(int argc, char **argv) {
     format_opts = 0;
 
     opterr = 0;
-    while ((opt = getopt(argc, argv, "his")) != -1) {
+    while ((opt = getopt(argc, argv, "chis")) != -1) {
         switch (opt) {
+        case 'c':
+            format_opts |= JSON_FORMAT_COLOR_ANSI;
+            break;
+
         case 'h':
             json_usage(argv[0], 0);
             break;
@@ -82,9 +86,10 @@ main(int argc, char **argv) {
 
 static void
 json_usage(const char *argv0, int exit_code) {
-    printf("Usage: %s [-his] <filename>\n"
+    printf("Usage: %s [-chis] <filename>\n"
             "\n"
             "Options:\n"
+            "  -c colorize output using ansi escape sequences\n"
             "  -h display help\n"
             "  -i indent output\n"
             "  -s escape solidus characters\n",

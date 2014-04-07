@@ -63,7 +63,8 @@ enum json_type json_value_type(const struct json_value *);
 
 enum json_format_option {
     JSON_FORMAT_INDENT         = 0x01,
-    JSON_FORMAT_ESCAPE_SOLIDUS = 0x02,
+    JSON_FORMAT_COLOR_ANSI     = 0x02,
+    JSON_FORMAT_ESCAPE_SOLIDUS = 0x04,
 };
 
 char *json_value_format(const struct json_value *, uint32_t, size_t *);

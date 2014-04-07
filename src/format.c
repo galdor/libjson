@@ -24,6 +24,19 @@
 
 #include <buffer.h>
 
+enum json_ansi_color {
+    JSON_ANSI_COLOR_BLACK   = 0,
+    JSON_ANSI_COLOR_RED     = 1,
+    JSON_ANSI_COLOR_GREEN   = 2,
+    JSON_ANSI_COLOR_YELLOW  = 3,
+    JSON_ANSI_COLOR_BLUE    = 4,
+    JSON_ANSI_COLOR_MAGENTA = 5,
+    JSON_ANSI_COLOR_CYAN    = 6,
+    JSON_ANSI_COLOR_WHITE   = 7,
+    JSON_ANSI_COLOR_GRAY    = 8,
+    JSON_ANSI_COLOR_DEFAULT = 9,
+};
+
 struct json_format_ctx {
     uint32_t opts;
     size_t indent;
@@ -53,6 +66,22 @@ static bool json_utf8_is_leading_byte(unsigned char);
 static bool json_utf8_is_continuation_byte(unsigned char);
 static size_t json_utf8_sequence_length(unsigned char);
 static int json_utf8_decode_codepoint(const char *, uint32_t *, const char **);
+
+#define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
+    if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
+        if (bf_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) { \
+            json_set_error("%s", bf_get_error());                      \
+            return 1;                                                  \
+        }                                                              \
+    }
+
+#define JSON_CLEAR_ANSI_COLOR(ctx_, buf_)                \
+    if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {           \
+        if (bf_buffer_add_string(buf_, "\e[0m") == -1) { \
+            json_set_error("%s", bf_get_error());        \
+            return 1;                                    \
+        }                                                \
+    }
 
 char *
 json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
@@ -292,6 +321,8 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
         return -1;
     }
 
+    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_YELLOW);
+
     ptr = string;
     len = length;
 
@@ -322,7 +353,7 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
             const char *end;
 
             if (json_utf8_decode_codepoint(ptr, &codepoint, &end) == -1)
-                return -1;
+                goto error;
 
             if (codepoint <= 0xffff) {
                 /* \uxxxx */
@@ -345,43 +376,58 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
         } else {
             json_set_error("invalid byte \\%hhu in utf8 string",
                            (unsigned char)*ptr);
-            return -1;
+            goto error;
         }
 
         if (ret == -1) {
             json_set_error("%s", bf_get_error());
-            return -1;
+            goto error;
         }
 
         ptr++;
         len--;
     }
 
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
+
     if (bf_buffer_add_string(buf, "\"") == -1) {
         json_set_error("%s", bf_get_error());
         return -1;
     }
+
     return 0;
+
+error:
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
+    return -1;
 }
 
 static int
 json_format_boolean(bool boolean, struct bf_buffer *buf,
                     struct json_format_ctx *ctx) {
+    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
+
     if (bf_buffer_add_string(buf, boolean ? "true" : "false") == -1) {
         json_set_error("%s", bf_get_error());
+        JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
 
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
     return 0;
 }
 
 static int
 json_format_null(struct bf_buffer *buf, struct json_format_ctx *ctx) {
+    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
+
     if (bf_buffer_add_string(buf, "null") == -1) {
         json_set_error("%s", bf_get_error());
+        JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
 
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
     return 0;
 }
 
