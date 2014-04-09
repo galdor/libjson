@@ -25,7 +25,7 @@ main(int argc, char **argv) {
 
 #define JSONT_BEGIN2(str_, len_)                                \
     do {                                                        \
-        value = json_parse(str_, len_);                         \
+        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);     \
         if (!value) {                                           \
             JSONT_DIE("%s:%d: cannot parse json: %s",           \
                       __FILE__, __LINE__, json_get_error());    \
@@ -37,7 +37,7 @@ main(int argc, char **argv) {
 
 #define JSONT_BEGIN_ARRAY2(str_, len_, nb_elements_)             \
     do {                                                         \
-        value = json_parse(str_, len_);                          \
+        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);      \
         if (!value) {                                            \
             JSONT_DIE("%s:%d: cannot parse json: %s",            \
                       __FILE__, __LINE__, json_get_error());     \
@@ -268,13 +268,13 @@ main(int argc, char **argv) {
 
     /* Invalid json */
 
-#define JSONT_IS_INVALID(str_)                      \
-    do {                                            \
-        value = json_parse(str_, strlen(str_));     \
-        if (value) {                                \
-            JSONT_DIE("%s:%d: parsed invalid json", \
-                      __FILE__, __LINE__);          \
-        }                                           \
+#define JSONT_IS_INVALID(str_)                                      \
+    do {                                                            \
+        value = json_parse(str_, strlen(str_), JSON_PARSE_DEFAULT); \
+        if (value) {                                                \
+            JSONT_DIE("%s:%d: parsed invalid json",                 \
+                      __FILE__, __LINE__);                          \
+        }                                                           \
     } while (0)
 
     /* Top-level */

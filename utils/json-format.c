@@ -38,7 +38,7 @@ main(int argc, char **argv) {
     int opt, nb_opts;
     uint32_t format_opts;
 
-    format_opts = 0;
+    format_opts = JSON_FORMAT_DEFAULT;
 
     opterr = 0;
     while ((opt = getopt(argc, argv, "chis")) != -1) {
@@ -160,7 +160,7 @@ json_load_file(const char *filename) {
 
     close(fd);
 
-    value = json_parse(data, len);
+    value = json_parse(data, len, JSON_PARSE_DEFAULT);
     if (!value)
         json_die("%s", json_get_error());
 

@@ -24,6 +24,8 @@
 struct json_parser {
     const char *ptr;
     size_t len;
+
+    uint32_t options;
 };
 
 static void json_parser_skip(struct json_parser *, size_t);
@@ -50,13 +52,15 @@ static int json_write_codepoint_as_utf8(uint32_t, char *, size_t *);
 static int json_decode_hex_digit(unsigned char);
 
 struct json_value *
-json_parse(const char *buf, size_t sz) {
+json_parse(const char *buf, size_t sz, uint32_t options) {
     struct json_parser parser;
     struct json_value *value;
 
     memset(&parser, 0, sizeof(struct json_parser));
+
     parser.ptr = buf;
     parser.len = sz;
+    parser.options = options;
 
     if (json_parse_value(&parser, &value) == -1)
         return NULL;
