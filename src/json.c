@@ -235,6 +235,50 @@ json_object_add_entry(struct json_value *object_value, struct json_value *key,
     return 0;
 }
 
+struct json_object_iterator *
+json_object_iterate(struct json_value *value) {
+    struct json_object_iterator *it;
+
+    it = json_malloc(sizeof(struct json_object_iterator));
+    if (!it)
+        return NULL;
+    memset(it, 0, sizeof(struct json_object_iterator));
+
+    it->object = &value->u.object;
+    it->index = 0;
+
+    return it;
+}
+
+void
+json_object_iterator_delete(struct json_object_iterator *it) {
+    if (!it)
+        return;
+
+    memset(it, 0, sizeof(struct json_object_iterator));
+    json_free(it);
+}
+
+int
+json_object_iterator_get_next(struct json_object_iterator *it,
+                              struct json_value **pkey,
+                              struct json_value **pvalue) {
+    struct json_object_entry *entry;
+
+    if (it->index >= it->object->nb_entries)
+        return 0;
+
+    entry = it->object->entries + it->index;
+
+    if (pkey)
+        *pkey = entry->key;
+    if (pvalue)
+        *pvalue = entry->value;
+
+    it->index++;
+    return 1;
+}
+
 struct json_value *
 json_array_new(void) {
     return json_value_new(JSON_ARRAY);

@@ -20,7 +20,8 @@
 
 int
 main(int argc, char **argv) {
-    struct json_value *value, *child;
+    struct json_value *value, *child, *key, *val;
+    struct json_object_iterator *it;
 
 #define JSONT_BEGIN2(str_, len_)                                \
     do {                                                        \
@@ -241,6 +242,28 @@ main(int argc, char **argv) {
     JSONT_VALUE_IS_INTEGER(json_object_entry(child, "ba"), 1);
     JSONT_IS_TRUE(json_object_has_entry(child, "bb"));
     JSONT_VALUE_IS_INTEGER(json_object_entry(child, "bb"), 2);
+    JSONT_END();
+
+    /* Object iterators */
+    JSONT_BEGIN("{}");
+    it = json_object_iterate(value);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
+    JSONT_END();
+
+    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3}");
+    it = json_object_iterate(value);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 1);
+    JSONT_VALUE_IS_STRING(key, "a");
+    JSONT_VALUE_IS_INTEGER(val, 1);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 1);
+    JSONT_VALUE_IS_STRING(key, "b");
+    JSONT_VALUE_IS_INTEGER(val, 2);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 1);
+    JSONT_VALUE_IS_STRING(key, "c");
+    JSONT_VALUE_IS_INTEGER(val, 3);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
+    JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
     JSONT_END();
 
     /* Invalid json */

@@ -79,6 +79,11 @@ struct json_value *json_object_entry2(struct json_value *,
 int json_object_add_entry(struct json_value *, struct json_value *,
                           struct json_value *);
 
+struct json_object_iterator *json_object_iterate(struct json_value *);
+void json_object_iterator_delete(struct json_object_iterator *);
+int json_object_iterator_get_next(struct json_object_iterator *,
+                                  struct json_value **, struct json_value **);
+
 struct json_value *json_array_new(void);
 size_t json_array_nb_elements(struct json_value *);
 struct json_value *json_array_element(struct json_value *, size_t);

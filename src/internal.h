@@ -34,6 +34,11 @@ struct json_object {
     size_t nb_entries;
 };
 
+struct json_object_iterator {
+    struct json_object *object;
+    size_t index;
+};
+
 struct json_array {
     struct json_value **elements;
     size_t nb_elements;
