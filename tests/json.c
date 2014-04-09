@@ -92,12 +92,12 @@ main(int argc, char **argv) {
     /* Arrays */
     JSONT_BEGIN("[]");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_ARRAY);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 0);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 0);
     JSONT_END();
 
     JSONT_BEGIN(" [\t\n ] ");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_ARRAY);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 0);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 0);
     JSONT_END();
 
     /* Integers */
@@ -181,67 +181,67 @@ main(int argc, char **argv) {
     /* Objects */
     JSONT_BEGIN("{}");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 0);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 0);
     JSONT_END();
 
     JSONT_BEGIN(" {\t\n  } ");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 0);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 0);
     JSONT_END();
 
     JSONT_BEGIN("{\"a\": 1, \"b\"  :2  ,  \"c\":3}");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 3);
-    JSONT_IS_TRUE(json_object_has_entry(value, "a"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(value, "a"), 1);
-    JSONT_IS_TRUE(json_object_has_entry(value, "b"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(value, "b"), 2);
-    JSONT_IS_TRUE(json_object_has_entry(value, "c"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(value, "c"), 3);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 3);
+    JSONT_IS_TRUE(json_object_has_member(value, "a"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(value, "a"), 1);
+    JSONT_IS_TRUE(json_object_has_member(value, "b"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(value, "b"), 2);
+    JSONT_IS_TRUE(json_object_has_member(value, "c"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(value, "c"), 3);
     JSONT_END();
 
     JSONT_BEGIN("{\"\": 1, \"   \": 2}");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 2);
-    JSONT_IS_TRUE(json_object_has_entry(value, ""));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(value, ""), 1);
-    JSONT_IS_TRUE(json_object_has_entry(value, "   "));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(value, "   "), 2);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 2);
+    JSONT_IS_TRUE(json_object_has_member(value, ""));
+    JSONT_VALUE_IS_INTEGER(json_object_member(value, ""), 1);
+    JSONT_IS_TRUE(json_object_has_member(value, "   "));
+    JSONT_VALUE_IS_INTEGER(json_object_member(value, "   "), 2);
     JSONT_END();
 
     JSONT_BEGIN2("{\"foo\0bar\": 1, \"\0tail\": 2, \"head\0\": 3}", 38);
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 3);
-    JSONT_IS_TRUE(json_object_has_entry2(value, "foo\0bar", 7));
-    JSONT_VALUE_IS_INTEGER(json_object_entry2(value, "foo\0bar", 7), 1);
-    JSONT_IS_TRUE(json_object_has_entry2(value, "\0tail", 5));
-    JSONT_VALUE_IS_INTEGER(json_object_entry2(value, "\0tail", 5), 2);
-    JSONT_IS_TRUE(json_object_has_entry2(value, "head\0", 5));
-    JSONT_VALUE_IS_INTEGER(json_object_entry2(value, "head\0", 5), 3);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 3);
+    JSONT_IS_TRUE(json_object_has_member2(value, "foo\0bar", 7));
+    JSONT_VALUE_IS_INTEGER(json_object_member2(value, "foo\0bar", 7), 1);
+    JSONT_IS_TRUE(json_object_has_member2(value, "\0tail", 5));
+    JSONT_VALUE_IS_INTEGER(json_object_member2(value, "\0tail", 5), 2);
+    JSONT_IS_TRUE(json_object_has_member2(value, "head\0", 5));
+    JSONT_VALUE_IS_INTEGER(json_object_member2(value, "head\0", 5), 3);
     JSONT_END();
 
     JSONT_BEGIN("{\"a\": {\"aa\": 1}, \"b\": [{\"ba\": 1, \"bb\": 2}]}");
     JSONT_IS_EQUAL_INT(json_value_type(value), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(value), 2);
-    JSONT_IS_TRUE(json_object_has_entry(value, "a"));
-    child = json_object_entry(value, "a");
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(value), 2);
+    JSONT_IS_TRUE(json_object_has_member(value, "a"));
+    child = json_object_member(value, "a");
     JSONT_IS_TRUE(child != NULL);
     JSONT_IS_EQUAL_INT(json_value_type(child), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(child), 1);
-    JSONT_IS_TRUE(json_object_has_entry(child, "aa"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(child, "aa"), 1);
-    JSONT_IS_TRUE(json_object_has_entry(value, "b"));
-    child = json_object_entry(value, "b");
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(child), 1);
+    JSONT_IS_TRUE(json_object_has_member(child, "aa"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(child, "aa"), 1);
+    JSONT_IS_TRUE(json_object_has_member(value, "b"));
+    child = json_object_member(value, "b");
     JSONT_IS_TRUE(child != NULL);
     JSONT_IS_EQUAL_INT(json_value_type(child), JSON_ARRAY);
     JSONT_IS_EQUAL_UINT(json_array_nb_elements(child), 1);
     child = json_array_element(child, 0);
     JSONT_IS_EQUAL_INT(json_value_type(child), JSON_OBJECT);
-    JSONT_IS_EQUAL_UINT(json_object_nb_entries(child), 2);
-    JSONT_IS_TRUE(json_object_has_entry(child, "ba"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(child, "ba"), 1);
-    JSONT_IS_TRUE(json_object_has_entry(child, "bb"));
-    JSONT_VALUE_IS_INTEGER(json_object_entry(child, "bb"), 2);
+    JSONT_IS_EQUAL_UINT(json_object_nb_members(child), 2);
+    JSONT_IS_TRUE(json_object_has_member(child, "ba"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(child, "ba"), 1);
+    JSONT_IS_TRUE(json_object_has_member(child, "bb"));
+    JSONT_VALUE_IS_INTEGER(json_object_member(child, "bb"), 2);
     JSONT_END();
 
     /* Object iterators */

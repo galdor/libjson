@@ -134,7 +134,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
         json_parser_skip_ws(parser);
 
         if (*parser->ptr == '}') {
-            if (object_value->u.object.nb_entries > 0) {
+            if (object_value->u.object.nb_members > 0) {
                 json_set_error("truncated object");
                 goto error;
             }
@@ -169,7 +169,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
             goto error;
         }
 
-        if (json_object_add_entry(object_value, key, value) == -1) {
+        if (json_object_add_member(object_value, key, value) == -1) {
             json_value_delete(key);
             json_value_delete(value);
             goto error;

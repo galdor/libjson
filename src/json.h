@@ -75,14 +75,14 @@ enum json_format_option {
 char *json_value_format(const struct json_value *, uint32_t, size_t *);
 
 struct json_value *json_object_new(void);
-size_t json_object_nb_entries(struct json_value *);
-bool json_object_has_entry(struct json_value *, const char *);
-bool json_object_has_entry2(struct json_value *, const char *, size_t);
-struct json_value *json_object_entry(struct json_value *, const char *);
-struct json_value *json_object_entry2(struct json_value *,
-                                      const char *, size_t);
-int json_object_add_entry(struct json_value *, struct json_value *,
-                          struct json_value *);
+size_t json_object_nb_members(struct json_value *);
+bool json_object_has_member(struct json_value *, const char *);
+bool json_object_has_member2(struct json_value *, const char *, size_t);
+struct json_value *json_object_member(struct json_value *, const char *);
+struct json_value *json_object_member2(struct json_value *,
+                                       const char *, size_t);
+int json_object_add_member(struct json_value *, struct json_value *,
+                           struct json_value *);
 
 struct json_object_iterator *json_object_iterate(struct json_value *);
 void json_object_iterator_delete(struct json_object_iterator *);

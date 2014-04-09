@@ -24,14 +24,14 @@ void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
 /* JSON */
-struct json_object_entry {
+struct json_object_member {
     struct json_value *key;
     struct json_value *value;
 };
 
 struct json_object {
-    struct json_object_entry *entries;
-    size_t nb_entries;
+    struct json_object_member *members;
+    size_t nb_members;
 };
 
 struct json_object_iterator {

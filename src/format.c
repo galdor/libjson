@@ -167,10 +167,10 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
         ctx->indent += 2;
     }
 
-    for (size_t i = 0; i < object->nb_entries; i++) {
-        struct json_object_entry *entry;
+    for (size_t i = 0; i < object->nb_members; i++) {
+        struct json_object_member *member;
 
-        entry = object->entries + i;
+        member = object->members + i;
 
         if (i > 0) {
             if (bf_buffer_add_string(buf, ", ") == -1) {
@@ -191,7 +191,7 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
                 return -1;
         }
 
-        if (json_format_value(entry->key, buf, ctx) == -1)
+        if (json_format_value(member->key, buf, ctx) == -1)
             return -1;
 
         if (bf_buffer_add_string(buf, ": ") == -1) {
@@ -199,7 +199,7 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
             return -1;
         }
 
-        if (json_format_value(entry->value, buf, ctx) == -1)
+        if (json_format_value(member->value, buf, ctx) == -1)
             return -1;
     }
 

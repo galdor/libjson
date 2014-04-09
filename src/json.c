@@ -40,11 +40,11 @@ json_value_delete(struct json_value *value) {
 
     switch (value->type) {
     case JSON_OBJECT:
-        for (size_t i = 0; i < value->u.object.nb_entries; i++) {
-            json_value_delete(value->u.object.entries[i].key);
-            json_value_delete(value->u.object.entries[i].value);
+        for (size_t i = 0; i < value->u.object.nb_members; i++) {
+            json_value_delete(value->u.object.members[i].key);
+            json_value_delete(value->u.object.members[i].value);
         }
-        json_free(value->u.object.entries);
+        json_free(value->u.object.members);
         break;
 
     case JSON_ARRAY:
@@ -74,23 +74,23 @@ json_value_clone(const struct json_value *value) {
 
         nvalue = json_object_new();
 
-        for (size_t i = 0; i < value->u.object.nb_entries; i++) {
+        for (size_t i = 0; i < value->u.object.nb_members; i++) {
             struct json_value *key, *val;
 
-            key = json_value_clone(value->u.object.entries[i].key);
+            key = json_value_clone(value->u.object.members[i].key);
             if (!key) {
                 json_value_delete(nvalue);
                 return NULL;
             }
 
-            val = json_value_clone(value->u.object.entries[i].value);
+            val = json_value_clone(value->u.object.members[i].value);
             if (!val) {
                 json_value_delete(key);
                 json_value_delete(nvalue);
                 return NULL;
             }
 
-            if (json_object_add_entry(nvalue, key, val) == -1) {
+            if (json_object_add_member(nvalue, key, val) == -1) {
                 json_value_delete(key);
                 json_value_delete(val);
                 json_value_delete(nvalue);
@@ -157,54 +157,54 @@ json_object_new(void) {
 }
 
 size_t
-json_object_nb_entries(struct json_value *value) {
-    return value->u.object.nb_entries;
+json_object_nb_members(struct json_value *value) {
+    return value->u.object.nb_members;
 }
 
 bool
-json_object_has_entry(struct json_value *value, const char *key) {
-    return json_object_entry2(value, key, strlen(key)) != NULL;
+json_object_has_member(struct json_value *value, const char *key) {
+    return json_object_member2(value, key, strlen(key)) != NULL;
 }
 
 bool
-json_object_has_entry2(struct json_value *value, const char *key, size_t len) {
-    return json_object_entry2(value, key, len) != NULL;
+json_object_has_member2(struct json_value *value, const char *key, size_t len) {
+    return json_object_member2(value, key, len) != NULL;
 }
 
 struct json_value *
-json_object_entry(struct json_value *value, const char *key) {
-    return json_object_entry2(value, key, strlen(key));
+json_object_member(struct json_value *value, const char *key) {
+    return json_object_member2(value, key, strlen(key));
 }
 
 struct json_value *
-json_object_entry2(struct json_value *value,
-                   const char *key, size_t len) {
+json_object_member2(struct json_value *value,
+                    const char *key, size_t len) {
     struct json_object *object;
 
     object = &value->u.object;
 
-    for (size_t i = 0; i < object->nb_entries; i++) {
-        struct json_object_entry *entry;
+    for (size_t i = 0; i < object->nb_members; i++) {
+        struct json_object_member *member;
 
-        entry = object->entries + i;
+        member = object->members + i;
 
-        if (entry->key->u.string.len != len)
+        if (member->key->u.string.len != len)
             continue;
 
-        if (memcmp(entry->key->u.string.ptr, key, len) == 0)
-            return entry->value;
+        if (memcmp(member->key->u.string.ptr, key, len) == 0)
+            return member->value;
     }
 
     return NULL;
 }
 
 int
-json_object_add_entry(struct json_value *object_value, struct json_value *key,
+json_object_add_member(struct json_value *object_value, struct json_value *key,
                       struct json_value *value) {
     struct json_object *object;
-    struct json_object_entry *entries;
-    struct json_object_entry *entry;
-    size_t nb_entries;
+    struct json_object_member *members;
+    struct json_object_member *member;
+    size_t nb_members;
 
     if (key->type != JSON_STRING) {
         json_set_error("key is not a string");
@@ -213,24 +213,24 @@ json_object_add_entry(struct json_value *object_value, struct json_value *key,
 
     object = &object_value->u.object;
 
-    if (object->nb_entries == 0) {
-        nb_entries = 1;
-        entries = json_malloc(sizeof(struct json_object_entry));
+    if (object->nb_members == 0) {
+        nb_members = 1;
+        members = json_malloc(sizeof(struct json_object_member));
     } else {
-        nb_entries = object->nb_entries + 1;
-        entries = json_realloc(object->entries,
-                               nb_entries * sizeof(struct json_object_entry));
+        nb_members = object->nb_members + 1;
+        members = json_realloc(object->members,
+                               nb_members * sizeof(struct json_object_member));
     }
 
-    if (!entries)
+    if (!members)
         return -1;
 
-    object->entries = entries;
-    object->nb_entries = nb_entries;
+    object->members = members;
+    object->nb_members = nb_members;
 
-    entry = &object->entries[object->nb_entries - 1];
-    entry->key = key;
-    entry->value = value;
+    member = &object->members[object->nb_members - 1];
+    member->key = key;
+    member->value = value;
 
     return 0;
 }
@@ -263,17 +263,17 @@ int
 json_object_iterator_get_next(struct json_object_iterator *it,
                               struct json_value **pkey,
                               struct json_value **pvalue) {
-    struct json_object_entry *entry;
+    struct json_object_member *member;
 
-    if (it->index >= it->object->nb_entries)
+    if (it->index >= it->object->nb_members)
         return 0;
 
-    entry = it->object->entries + it->index;
+    member = it->object->members + it->index;
 
     if (pkey)
-        *pkey = entry->key;
+        *pkey = member->key;
     if (pvalue)
-        *pvalue = entry->value;
+        *pvalue = member->value;
 
     it->index++;
     return 1;
