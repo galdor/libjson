@@ -235,6 +235,44 @@ json_object_add_member(struct json_value *object_value, struct json_value *key,
     return 0;
 }
 
+int
+json_object_set_member2(struct json_value *value, const char *key, size_t len,
+                        struct json_value *val) {
+    struct json_object *object;
+    struct json_object_member *member;
+    bool found;
+
+    object = &value->u.object;
+
+    member = NULL;
+    found = false;
+
+    for (size_t i = 0; i < object->nb_members; i++) {
+        member = object->members + i;
+
+        if (member->key->u.string.len != len)
+            continue;
+
+        if (memcmp(member->key->u.string.ptr, key, len) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+        return json_object_add_member(value, json_string_new2(key, len), val);
+
+    json_value_delete(member->value);
+    member->value = val;
+    return 1;
+}
+
+int
+json_object_set_member(struct json_value *value, const char *key,
+                       struct json_value *val) {
+    return json_object_set_member2(value, key, strlen(key), val);
+}
+
 struct json_object_iterator *
 json_object_iterate(struct json_value *value) {
     struct json_object_iterator *it;
