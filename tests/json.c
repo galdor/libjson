@@ -249,6 +249,7 @@ main(int argc, char **argv) {
     it = json_object_iterate(value);
     JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
     JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
+    json_object_iterator_delete(it);
     JSONT_END();
 
     JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3}");
@@ -264,6 +265,7 @@ main(int argc, char **argv) {
     JSONT_VALUE_IS_INTEGER(val, 3);
     JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
     JSONT_IS_EQUAL_INT(json_object_iterator_get_next(it, &key, &val), 0);
+    json_object_iterator_delete(it);
     JSONT_END();
 
     /* Invalid json */
