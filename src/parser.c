@@ -334,7 +334,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
             return -1;
         }
 
-        memcpy(tmp, start, sizeof(tmp));
+        memcpy(tmp, start, toklen);
         tmp[toklen] = '\0';
 
         errno = 0;
@@ -369,7 +369,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
             return -1;
         }
 
-        memcpy(tmp, start, sizeof(tmp));
+        memcpy(tmp, start, toklen);
         tmp[toklen] = '\0';
 
         errno = 0;
