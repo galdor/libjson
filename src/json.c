@@ -157,29 +157,30 @@ json_object_new(void) {
 }
 
 size_t
-json_object_nb_members(struct json_value *value) {
+json_object_nb_members(const struct json_value *value) {
     return value->u.object.nb_members;
 }
 
 bool
-json_object_has_member(struct json_value *value, const char *key) {
+json_object_has_member(const struct json_value *value, const char *key) {
     return json_object_member2(value, key, strlen(key)) != NULL;
 }
 
 bool
-json_object_has_member2(struct json_value *value, const char *key, size_t len) {
+json_object_has_member2(const struct json_value *value,
+                        const char *key, size_t len) {
     return json_object_member2(value, key, len) != NULL;
 }
 
 struct json_value *
-json_object_member(struct json_value *value, const char *key) {
+json_object_member(const struct json_value *value, const char *key) {
     return json_object_member2(value, key, strlen(key));
 }
 
 struct json_value *
-json_object_member2(struct json_value *value,
+json_object_member2(const struct json_value *value,
                     const char *key, size_t len) {
-    struct json_object *object;
+    const struct json_object *object;
 
     object = &value->u.object;
 
@@ -200,7 +201,7 @@ json_object_member2(struct json_value *value,
 
 int
 json_object_add_member(struct json_value *object_value, struct json_value *key,
-                      struct json_value *value) {
+                       struct json_value *value) {
     struct json_object *object;
     struct json_object_member *members;
     struct json_object_member *member;
@@ -323,12 +324,12 @@ json_array_new(void) {
 }
 
 size_t
-json_array_nb_elements(struct json_value *value) {
+json_array_nb_elements(const struct json_value *value) {
     return value->u.array.nb_elements;
 }
 
 struct json_value *
-json_array_element(struct json_value *value, size_t idx) {
+json_array_element(const struct json_value *value, size_t idx) {
     if (idx >= value->u.array.nb_elements) {
         json_set_error("invalid index %zu", idx);
         return NULL;
@@ -382,7 +383,7 @@ json_integer_new(int64_t integer) {
 }
 
 int64_t
-json_integer_value(struct json_value *value) {
+json_integer_value(const struct json_value *value) {
     return value->u.integer;
 }
 
@@ -399,7 +400,7 @@ json_real_new(double real) {
 }
 
 double
-json_real_value(struct json_value *value) {
+json_real_value(const struct json_value *value) {
     return value->u.real;
 }
 
@@ -426,12 +427,12 @@ json_string_new(const char *string) {
 }
 
 const char *
-json_string_value(struct json_value *value) {
+json_string_value(const struct json_value *value) {
     return value->u.string.ptr;
 }
 
 size_t
-json_string_length(struct json_value *value) {
+json_string_length(const struct json_value *value) {
     return value->u.string.len;
 }
 
@@ -468,7 +469,7 @@ json_boolean_new(bool boolean) {
 }
 
 bool
-json_boolean_value(struct json_value *value) {
+json_boolean_value(const struct json_value *value) {
     return value->u.boolean;
 }
 

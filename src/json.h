@@ -75,11 +75,11 @@ enum json_format_option {
 char *json_value_format(const struct json_value *, uint32_t, size_t *);
 
 struct json_value *json_object_new(void);
-size_t json_object_nb_members(struct json_value *);
-bool json_object_has_member(struct json_value *, const char *);
-bool json_object_has_member2(struct json_value *, const char *, size_t);
-struct json_value *json_object_member(struct json_value *, const char *);
-struct json_value *json_object_member2(struct json_value *,
+size_t json_object_nb_members(const struct json_value *);
+bool json_object_has_member(const struct json_value *, const char *);
+bool json_object_has_member2(const struct json_value *, const char *, size_t);
+struct json_value *json_object_member(const struct json_value *, const char *);
+struct json_value *json_object_member2(const struct json_value *,
                                        const char *, size_t);
 int json_object_add_member(struct json_value *, struct json_value *,
                            struct json_value *);
@@ -94,23 +94,23 @@ int json_object_iterator_get_next(struct json_object_iterator *,
                                   struct json_value **, struct json_value **);
 
 struct json_value *json_array_new(void);
-size_t json_array_nb_elements(struct json_value *);
-struct json_value *json_array_element(struct json_value *, size_t);
+size_t json_array_nb_elements(const struct json_value *);
+struct json_value *json_array_element(const struct json_value *, size_t);
 int json_array_add_element(struct json_value *, struct json_value *);
 
 struct json_value *json_integer_new(int64_t);
-int64_t json_integer_value(struct json_value *);
+int64_t json_integer_value(const struct json_value *);
 
 struct json_value *json_real_new(double);
-double json_real_value(struct json_value *);
+double json_real_value(const struct json_value *);
 
 struct json_value *json_string_new(const char *);
 struct json_value *json_string_new2(const char *, size_t);
-const char *json_string_value(struct json_value *);
-size_t json_string_length(struct json_value *);
+const char *json_string_value(const struct json_value *);
+size_t json_string_length(const struct json_value *);
 
 struct json_value *json_boolean_new(bool);
-bool json_boolean_value(struct json_value *);
+bool json_boolean_value(const struct json_value *);
 
 struct json_value *json_null_new(void);
 
