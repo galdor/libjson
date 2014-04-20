@@ -291,22 +291,30 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
 static int
 json_format_integer(int64_t integer, struct bf_buffer *buf,
                     struct json_format_ctx *ctx) {
+    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
+
     if (bf_buffer_add_printf(buf, "%"PRIi64, integer) == -1) {
         json_set_error("%s", bf_get_error());
+        JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
 
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
     return 0;
 }
 
 static int
 json_format_real(double real, struct bf_buffer *buf,
                  struct json_format_ctx *ctx) {
+    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
+
     if (bf_buffer_add_printf(buf, "%.17g", real) == -1) {
         json_set_error("%s", bf_get_error());
+        JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
 
+    JSON_CLEAR_ANSI_COLOR(ctx, buf);
     return 0;
 }
 
