@@ -25,8 +25,10 @@
 #include "json.h"
 
 static void json_die(const char *, ...)
+    __attribute__ ((format(printf, 1, 2), noreturn));
+static void json_usage(const char *, int)
     __attribute__ ((noreturn));
-static void json_usage(const char *, int);
+
 static struct json_value *json_load_file(const char *);
 static void json_write_to_file(const struct json_value *, const char *,
                                uint32_t);

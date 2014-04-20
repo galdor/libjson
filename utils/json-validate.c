@@ -25,8 +25,9 @@
 #include "json.h"
 
 static void json_die(const char *, ...)
+    __attribute__ ((format(printf, 1, 2), noreturn));
+static void json_usage(const char *, int)
     __attribute__ ((noreturn));
-static void json_usage(const char *, int);
 static void json_validate_file(const char *);
 
 int
