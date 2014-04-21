@@ -17,150 +17,89 @@
 #ifndef JSON_TESTS_H
 #define JSON_TESTS_H
 
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
+#include <utest.h>
 
-#define JSONT_DIE(fmt_, ...)                      \
-    do {                                          \
-        fprintf(stderr, fmt_"\n", ##__VA_ARGS__); \
-        exit(1);                                  \
+#define JSONT_BEGIN2(str_, len_)                                   \
+    do {                                                           \
+        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        if (!value) {                                              \
+            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+        }                                                          \
     } while (0)
 
-#define JSONT_REPORT_ERROR(fmt_, ...)                   \
-    do {                                                \
-        fprintf(stderr, "%s:%d: \e[31m" fmt_ "\e[0m\n", \
-                __FILE__, __LINE__, ##__VA_ARGS__);     \
-        exit(1);                                        \
+#define JSONT_BEGIN(str_) JSONT_BEGIN2(str_, strlen(str_))
+
+#define JSONT_BEGIN_ARRAY2(str_, len_, nb_elements_)               \
+    do {                                                           \
+        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        if (!value) {                                              \
+            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+        }                                                          \
+                                                                   \
+        TEST_INT_EQ(json_value_type(value), JSON_ARRAY);           \
+        TEST_UINT_EQ(json_array_nb_elements(value), nb_elements_); \
     } while (0)
 
-#define JSONT_IS_TRUE(val_)                                                  \
-    do {                                                                     \
-        const char *val_str__ = #val_;                                       \
-        bool val__ = val_;                                                   \
-                                                                             \
-        if (!val__)                                                          \
-            JSONT_REPORT_ERROR("%s is false but should be true", val_str__); \
+#define JSONT_BEGIN_ARRAY(str_, nb_elements_) \
+    JSONT_BEGIN_ARRAY2(str_, strlen(str_), nb_elements_)
+
+#define JSONT_BEGIN_OBJECT2(str_, len_, nb_members_)               \
+    do {                                                           \
+        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        if (!value) {                                              \
+            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+        }                                                          \
+                                                                   \
+        TEST_INT_EQ(json_value_type(value), JSON_OBJECT);          \
+        TEST_UINT_EQ(json_object_nb_members(value), nb_members_);  \
     } while (0)
 
-#define JSONT_IS_FALSE(val_)                                                 \
-    do {                                                                     \
-        const char *val_str__ = #val_;                                       \
-        bool val__ = val_;                                                   \
-                                                                             \
-        if (val__)                                                           \
-            JSONT_REPORT_ERROR("%s is true but should be false", val_str__); \
+#define JSONT_BEGIN_OBJECT(str_, nb_members_) \
+    JSONT_BEGIN_OBJECT2(str_, strlen(str_), nb_members_)
+
+#define JSONT_END(str_) json_value_delete(value)
+
+#define JSONT_INTEGER_EQ(value_, i_)                        \
+    do {                                                    \
+        TEST_INT_EQ(json_value_type(value_), JSON_INTEGER); \
+        TEST_INT_EQ(json_integer_value(value_), i_);        \
     } while (0)
 
-#define JSONT_IS_EQUAL_BOOL(val_, expected_)                                 \
-    do {                                                                     \
-        const char *val_str__ = #val_;                                       \
-        bool val__ = (val_);                                                 \
-        bool expected__ = (expected_);                                       \
-                                                                             \
-        if (val__ != expected__) {                                           \
-            JSONT_REPORT_ERROR("%s is %s instead of %s",                     \
-                               val_str__, (val__ ? "true" : "false"),        \
-                               (expected__ ? "true" : "false"));             \
-        }                                                                    \
+#define JSONT_REAL_EQ(value_, r_)                           \
+    do {                                                    \
+        TEST_INT_EQ(json_value_type(value_), JSON_REAL);    \
+        TEST_DOUBLE_EQ(json_real_value(value_), r_);        \
     } while (0)
 
-#define JSONT_IS_EQUAL_UINT(val_, expected_)                                  \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        uint64_t val__ = (val_);                                              \
-        uint64_t expected__ = (expected_);                                    \
-                                                                              \
-        if (val__ != expected__) {                                            \
-            JSONT_REPORT_ERROR("%s is equal to %"PRIu64" instead of %"PRIu64, \
-                               val_str__, val__, expected__);                 \
-        }                                                                     \
+#define JSONT_STRING_EQ(value_, s_)                         \
+    do {                                                    \
+        TEST_INT_EQ(json_value_type(value_), JSON_STRING);  \
+        TEST_STRING_EQ(json_string_value(value_), s_);      \
     } while (0)
 
-#define JSONT_IS_EQUAL_INT(val_, expected_)                                   \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        int64_t val__ = (val_);                                               \
-        int64_t expected__ = (expected_);                                     \
-                                                                              \
-        if (val__ != expected__) {                                            \
-            JSONT_REPORT_ERROR("%s is equal to %"PRIi64" instead of %"PRIi64, \
-                               val_str__, val__, expected__);                 \
-        }                                                                     \
+#define JSONT_STRING2_EQ(value_, s_, s_len_)                \
+    do {                                                    \
+        TEST_INT_EQ(json_value_type(value_), JSON_STRING);  \
+        TEST_MEM_EQ(json_string_value(value_),              \
+                    json_string_length(value_),             \
+                    s_, s_len_);                            \
     } while (0)
 
-#define JSONT_IS_EQUAL_DOUBLE(val_, expected_)                                \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        double val__ = (val_);                                                \
-        double expected__ = (expected_);                                      \
-                                                                              \
-        if (val__ != expected__) {                                            \
-            JSONT_REPORT_ERROR("%s is equal to %.17g instead of %.17g",       \
-                               val_str__, val__, expected__);                 \
-        }                                                                     \
+#define JSONT_BOOLEAN_EQ(value_, b_)                        \
+    do {                                                    \
+        TEST_INT_EQ(json_value_type(value_), JSON_BOOLEAN); \
+        TEST_BOOL_EQ(json_boolean_value(value_), b_);       \
     } while (0)
 
-#define JSONT_IS_EQUAL_PTR(val_, expected_)                                   \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        const void * val__ = (val_);                                          \
-        const void * expected__ = (expected_);                                \
-                                                                              \
-        if (val__ && expected__) {                                            \
-            if (val__ != expected__) {                                        \
-                JSONT_REPORT_ERROR("%s is equal to %p instead of %p",         \
-                                   val_str__, val__, expected__);             \
-            }                                                                 \
-        } else if (val__) {                                                   \
-            JSONT_REPORT_ERROR("%s is equal to %p instead of being null",     \
-                               val_str__, val__);                             \
-        } else if (expected__) {                                              \
-            JSONT_REPORT_ERROR("%s is null instead of being equal to %p",     \
-                               val_str__, expected__);                        \
-        }                                                                     \
-    } while (0)
+#define JSONT_NULL_EQ(value_) \
+    TEST_INT_EQ(json_value_type(value_), JSON_NULL)
 
-#define JSONT_IS_EQUAL_STRING(val_, expected_)                                \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        const char *val__ = (val_);                                           \
-        const char *expected__ = (expected_);                                 \
-                                                                              \
-        if (!val__) {                                                         \
-            JSONT_REPORT_ERROR("%s is null instead of being equal to \"%s\"", \
-                               val_str__, expected__);                        \
-        }                                                                     \
-                                                                              \
-        if (strcmp(val__, expected__) != 0) {                                 \
-            JSONT_REPORT_ERROR("%s is equal to \"%s\" instead of \"%s\"",     \
-                               val_str__, val__, expected__);                 \
-        }                                                                     \
-    } while (0)
-
-#define JSONT_IS_EQUAL_STRING2(val_, val_len_, expected_, expected_len_)      \
-    do {                                                                      \
-        const char *val_str__ = #val_;                                        \
-        const char *val__ = (val_);                                           \
-        const char *expected__ = (expected_);                                 \
-        size_t val_len__ = (val_len_);                                        \
-        size_t expected_len__ = (expected_len_);                              \
-                                                                              \
-        if (!val__) {                                                         \
-            JSONT_REPORT_ERROR("%s is null instead of being equal to \"%s\"", \
-                               val_str__, expected__);                        \
-        }                                                                     \
-                                                                              \
-        if (val_len__ != expected_len__) {                                    \
-            JSONT_REPORT_ERROR("%s contains %zu characters instead of %zu",   \
-                               val_str__, val_len__, expected_len__);         \
-        }                                                                     \
-                                                                              \
-        if (memcmp(val__, expected__, val_len__) != 0) {                      \
-            JSONT_REPORT_ERROR("%s is equal to \"%s\" instead of \"%s\"",     \
-                               val_str__, val__, expected__);                 \
-        }                                                                     \
+#define JSONT_IS_INVALID(str_)                                      \
+    do {                                                            \
+        struct json_value *value;                                   \
+        value = json_parse(str_, strlen(str_), JSON_PARSE_DEFAULT); \
+        if (value)                                                  \
+            TEST_ABORT("parsed invalid json");                      \
     } while (0)
 
 #endif
