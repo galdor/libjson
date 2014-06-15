@@ -81,7 +81,9 @@ bool json_object_has_member2(const struct json_value *, const char *, size_t);
 struct json_value *json_object_member(const struct json_value *, const char *);
 struct json_value *json_object_member2(const struct json_value *,
                                        const char *, size_t);
-int json_object_add_member(struct json_value *, struct json_value *,
+int json_object_add_member2(struct json_value *, const char *, size_t,
+                            struct json_value *);
+int json_object_add_member(struct json_value *, const char *,
                            struct json_value *);
 int json_object_set_member2(struct json_value *, const char *, size_t,
                             struct json_value *);

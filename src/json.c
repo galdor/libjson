@@ -75,23 +75,23 @@ json_value_clone(const struct json_value *value) {
         nvalue = json_object_new();
 
         for (size_t i = 0; i < value->u.object.nb_members; i++) {
-            struct json_value *key, *val;
+            struct json_object_member *member;
+            struct json_value *val;
+            const char *key;
+            size_t len;
 
-            key = json_value_clone(value->u.object.members[i].key);
-            if (!key) {
-                json_value_delete(nvalue);
-                return NULL;
-            }
+            member = value->u.object.members + i;
 
-            val = json_value_clone(value->u.object.members[i].value);
+            key = member->key->u.string.ptr;
+            len = member->key->u.string.len;
+
+            val = json_value_clone(member->value);
             if (!val) {
-                json_value_delete(key);
                 json_value_delete(nvalue);
                 return NULL;
             }
 
-            if (json_object_add_member(nvalue, key, val) == -1) {
-                json_value_delete(key);
+            if (json_object_add_member2(nvalue, key, len, val) == -1) {
                 json_value_delete(val);
                 json_value_delete(nvalue);
                 return NULL;
@@ -200,17 +200,12 @@ json_object_member2(const struct json_value *value,
 }
 
 int
-json_object_add_member(struct json_value *object_value, struct json_value *key,
-                       struct json_value *value) {
+json_object_add_member2(struct json_value *object_value, const char *key,
+                        size_t len, struct json_value *value) {
     struct json_object *object;
     struct json_object_member *members;
     struct json_object_member *member;
     size_t nb_members;
-
-    if (key->type != JSON_STRING) {
-        json_set_error("key is not a string");
-        return -1;
-    }
 
     object = &object_value->u.object;
 
@@ -230,10 +225,16 @@ json_object_add_member(struct json_value *object_value, struct json_value *key,
     object->nb_members = nb_members;
 
     member = &object->members[object->nb_members - 1];
-    member->key = key;
+    member->key = json_string_new2(key, len);
     member->value = value;
 
     return 0;
+}
+
+int
+json_object_add_member(struct json_value *object_value, const char *key,
+                       struct json_value *value) {
+    return json_object_add_member2(value, key, strlen(key), value);
 }
 
 int
@@ -261,7 +262,7 @@ json_object_set_member2(struct json_value *value, const char *key, size_t len,
     }
 
     if (!found)
-        return json_object_add_member(value, json_string_new2(key, len), val);
+        return json_object_add_member2(value, key, len, val);
 
     json_value_delete(member->value);
     member->value = val;

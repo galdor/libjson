@@ -146,6 +146,11 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
         if (ret == -1)
             goto error;
 
+        if (json_value_type(key) != JSON_STRING) {
+            json_set_error("key in object member is not a string");
+            goto error;
+        }
+
         json_parser_skip_ws(parser);
 
         if (*parser->ptr != ':') {
@@ -169,7 +174,8 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
             goto error;
         }
 
-        if (json_object_add_member(object_value, key, value) == -1) {
+        if (json_object_add_member2(object_value, key->u.string.ptr,
+                                    key->u.string.len, value) == -1) {
             json_value_delete(key);
             json_value_delete(value);
             goto error;
