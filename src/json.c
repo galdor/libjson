@@ -239,9 +239,9 @@ json_object_add_member2(struct json_value *object_value, const char *key,
 }
 
 int
-json_object_add_member(struct json_value *object_value, const char *key,
+json_object_add_member(struct json_value *object, const char *key,
                        struct json_value *value) {
-    return json_object_add_member2(value, key, strlen(key), value);
+    return json_object_add_member2(object, key, strlen(key), value);
 }
 
 int
