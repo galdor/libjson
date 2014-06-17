@@ -65,7 +65,7 @@ static int json_format_indent(struct bf_buffer *, struct json_format_ctx *);
 static bool json_utf8_is_leading_byte(unsigned char);
 static bool json_utf8_is_continuation_byte(unsigned char);
 static size_t json_utf8_sequence_length(unsigned char);
-static int json_utf8_decode_codepoint(const char *, uint32_t *, const char **);
+static int json_utf8_decode_codepoint(const char *, uint32_t *, size_t *);
 
 #define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
@@ -358,10 +358,12 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
         } else if (json_utf8_is_leading_byte((unsigned char)*ptr)) {
             char tmp[13]; /* \uxxxx\uxxxx */
             uint32_t codepoint;
-            const char *end;
+            size_t sequence_length;
 
-            if (json_utf8_decode_codepoint(ptr, &codepoint, &end) == -1)
+            if (json_utf8_decode_codepoint(ptr, &codepoint,
+                                           &sequence_length) == -1) {
                 goto error;
+            }
 
             if (codepoint <= 0xffff) {
                 /* \uxxxx */
@@ -380,7 +382,8 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
                 ret = bf_buffer_add(buf, tmp, 12);
             }
 
-            ptr = end -1;
+            ptr += sequence_length;
+            len -= sequence_length;
         } else {
             json_set_error("invalid byte \\%hhu in utf8 string",
                            (unsigned char)*ptr);
@@ -471,7 +474,7 @@ json_utf8_sequence_length(unsigned char c) {
 
 static int
 json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
-                           const char **end) {
+                           size_t *p_sequence_length) {
     uint32_t codepoint;
     size_t length;
 
@@ -519,7 +522,7 @@ json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
     }
 
     *pcodepoint = codepoint;
-    *end = ptr + length;
+    *p_sequence_length = length;
     return 0;
 }
 
