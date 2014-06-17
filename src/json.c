@@ -203,9 +203,14 @@ int
 json_object_add_member2(struct json_value *object_value, const char *key,
                         size_t len, struct json_value *value) {
     struct json_object *object;
+    struct json_value *key_json;
     struct json_object_member *members;
     struct json_object_member *member;
     size_t nb_members;
+
+    key_json = json_string_new2(key, len);
+    if (!key_json)
+        return -1;
 
     object = &object_value->u.object;
 
@@ -218,14 +223,16 @@ json_object_add_member2(struct json_value *object_value, const char *key,
                                nb_members * sizeof(struct json_object_member));
     }
 
-    if (!members)
+    if (!members) {
+        json_value_delete(key_json);
         return -1;
+    }
 
     object->members = members;
     object->nb_members = nb_members;
 
     member = &object->members[object->nb_members - 1];
-    member->key = json_string_new2(key, len);
+    member->key = key_json;
     member->value = value;
 
     return 0;
