@@ -384,6 +384,7 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
 
             ptr += sequence_length;
             len -= sequence_length;
+            continue;
         } else {
             json_set_error("invalid byte \\%hhu in utf8 string",
                            (unsigned char)*ptr);
