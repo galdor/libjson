@@ -205,6 +205,45 @@ TEST(object_iterators) {
     JSONT_END();
 }
 
+TEST(object_remove_member) {
+    struct json_value *value;
+
+    JSONT_BEGIN("{\"a\": 1}");
+    json_object_remove_member(value, "a");
+    TEST_UINT_EQ(json_object_nb_members(value), 0);
+    TEST_FALSE(json_object_has_member(value, "a"));
+    JSONT_END();
+
+    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3, \"d\": 4, \"e\": 5}");
+    json_object_remove_member(value, "a");
+    TEST_UINT_EQ(json_object_nb_members(value), 4);
+    TEST_FALSE(json_object_has_member(value, "a"));
+    json_object_remove_member(value, "c");
+    TEST_UINT_EQ(json_object_nb_members(value), 3);
+    TEST_FALSE(json_object_has_member(value, "c"));
+    json_object_remove_member(value, "e");
+    TEST_UINT_EQ(json_object_nb_members(value), 2);
+    TEST_FALSE(json_object_has_member(value, "e"));
+    JSONT_END();
+
+    JSONT_BEGIN("{}");
+    json_object_remove_member(value, "a");
+    TEST_UINT_EQ(json_object_nb_members(value), 0);
+    JSONT_END();
+
+    JSONT_BEGIN("{\"a\": 1}");
+    json_object_remove_member(value, "b");
+    TEST_UINT_EQ(json_object_nb_members(value), 1);
+    TEST_TRUE(json_object_has_member(value, "a"));
+    JSONT_END();
+
+    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3, \"b\": 4}");
+    json_object_remove_member(value, "b");
+    TEST_UINT_EQ(json_object_nb_members(value), 2);
+    TEST_FALSE(json_object_has_member(value, "b"));
+    JSONT_END();
+}
+
 TEST(invalid) {
     JSONT_IS_INVALID("");
     JSONT_IS_INVALID("1");
@@ -299,6 +338,7 @@ main(int argc, char **argv) {
     TEST_RUN(suite, null);
     TEST_RUN(suite, objects);
     TEST_RUN(suite, object_iterators);
+    TEST_RUN(suite, object_remove_member);
 
     TEST_RUN(suite, invalid);
     TEST_RUN(suite, invalid_arrays);
