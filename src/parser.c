@@ -181,6 +181,8 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
             goto error;
         }
 
+        json_value_delete(key);
+
         json_parser_skip_ws(parser);
         if (parser->len == 0) {
             json_set_error("truncated object");
