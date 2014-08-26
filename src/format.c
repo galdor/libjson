@@ -87,7 +87,8 @@ char *
 json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     struct json_format_ctx ctx;
     struct bf_buffer *buf;
-    char *text;
+    char *data, *text;
+    size_t length;
 
     buf = bf_buffer_new(0);
     if (!buf) {
@@ -102,14 +103,21 @@ json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     if (json_format_value(value, buf, &ctx) == -1)
         goto error;
 
-    text = bf_buffer_dup_string(buf);
-    if (!text) {
+    data = bf_buffer_extract(buf, &length);
+    if (!data) {
         json_set_error("%s", bf_get_error());
         goto error;
     }
 
+    text = json_malloc(length + 1);
+    if (!text)
+        goto error;
+
+    memcpy(text, data, length);
+    text[length] = '\0';
+
     if (plen)
-        *plen = bf_buffer_length(buf);
+        *plen = length;
 
     bf_buffer_delete(buf);
     return text;
