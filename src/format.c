@@ -116,6 +116,8 @@ json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     memcpy(text, data, length);
     text[length] = '\0';
 
+    bf_free(data);
+
     if (plen)
         *plen = length;
 
