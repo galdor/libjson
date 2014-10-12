@@ -66,7 +66,7 @@ json_parse(const char *buf, size_t sz, uint32_t options) {
         return NULL;
 
     if (value->type != JSON_OBJECT && value->type != JSON_ARRAY) {
-        json_set_error("top-level value is neither an object nor an array");
+        c_set_error("top-level value is neither an object nor an array");
         json_value_delete(value);
         return NULL;
     }
@@ -122,7 +122,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
 
     json_parser_skip(parser, 1); /* '{' */
     if (parser->len == 0) {
-        json_set_error("truncated object");
+        c_set_error("truncated object");
         goto error;
     }
 
@@ -135,7 +135,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
 
         if (*parser->ptr == '}') {
             if (object_value->u.object.nb_members > 0) {
-                json_set_error("truncated object");
+                c_set_error("truncated object");
                 goto error;
             }
 
@@ -147,7 +147,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
             goto error;
 
         if (json_value_type(key) != JSON_STRING) {
-            json_set_error("key in object member is not a string");
+            c_set_error("key in object member is not a string");
             goto error;
         }
 
@@ -164,7 +164,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
         json_parser_skip_ws(parser);
         if (parser->len == 0) {
             json_value_delete(key);
-            json_set_error("truncated object");
+            c_set_error("truncated object");
             goto error;
         }
 
@@ -185,7 +185,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
 
         json_parser_skip_ws(parser);
         if (parser->len == 0) {
-            json_set_error("truncated object");
+            c_set_error("truncated object");
             goto error;
         }
 
@@ -201,7 +201,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
     }
 
     if (*parser->ptr != '}') {
-        json_set_error("truncated object");
+        c_set_error("truncated object");
         goto error;
     }
 
@@ -225,7 +225,7 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
 
     json_parser_skip(parser, 1); /* '[' */
     if (parser->len == 0) {
-        json_set_error("truncated array");
+        c_set_error("truncated array");
         goto error;
     }
 
@@ -237,7 +237,7 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
 
         if (*parser->ptr == ']') {
             if (value->u.array.nb_elements > 0) {
-                json_set_error("truncated array");
+                c_set_error("truncated array");
                 goto error;
             }
 
@@ -255,7 +255,7 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
 
         json_parser_skip_ws(parser);
         if (parser->len == 0) {
-            json_set_error("truncated array");
+            c_set_error("truncated array");
             goto error;
         }
 
@@ -271,7 +271,7 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
     }
 
     if (*parser->ptr != ']') {
-        json_set_error("truncated array");
+        c_set_error("truncated array");
         goto error;
     }
 
@@ -314,7 +314,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
     }
 
     if (!found) {
-        json_set_error("truncated number");
+        c_set_error("truncated number");
         return -1;
     }
 
@@ -338,7 +338,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
 
         toklen = (size_t)(parser->ptr - start);
         if (toklen >= sizeof(tmp)) {
-            json_set_error("integer too long");
+            c_set_error("integer too long");
             return -1;
         }
 
@@ -348,7 +348,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
         errno = 0;
         llval = strtoll(tmp, NULL, 10);
         if (errno) {
-            json_set_error("%s", strerror(errno));
+            c_set_error("%s", strerror(errno));
             return -1;
         }
 
@@ -373,7 +373,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
 
         toklen = (size_t)(parser->ptr - start);
         if (toklen >= sizeof(tmp)) {
-            json_set_error("real too long");
+            c_set_error("real too long");
             return -1;
         }
 
@@ -383,7 +383,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
         errno = 0;
         real = strtod(tmp, NULL);
         if (errno) {
-            json_set_error("%s", strerror(errno));
+            c_set_error("%s", strerror(errno));
             return -1;
         }
 
@@ -392,7 +392,7 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
             return -1;
     } else {
         /* Should never happen */
-        json_set_error("unknown number type %d", type);
+        c_set_error("unknown number type %d", type);
         return -1;
     }
 
@@ -416,7 +416,7 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
     while (parser->len > 0) {
         if (*parser->ptr == '\\') {
             if (parser->len < 2) {
-                json_set_error("truncated escape sequence");
+                c_set_error("truncated escape sequence");
                 json_value_delete(value);
                 return -1;
             }
@@ -431,7 +431,7 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
     }
 
     if (*parser->ptr != '"') {
-        json_set_error("truncated string");
+        c_set_error("truncated string");
         json_value_delete(value);
         return -1;
     }
@@ -478,7 +478,7 @@ json_parse_literal(struct json_parser *parser, struct json_value **pvalue) {
 
         length = 4;
     } else {
-        json_set_error("unknown literal");
+        c_set_error("unknown literal");
         return -1;
     }
 
@@ -530,7 +530,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
 
     /* A decoded string has a length smaller or equal to the length of an
      * encoded string. */
-    string = json_malloc(sz + 1);
+    string = c_malloc(sz + 1);
     if (!string)
         return NULL;
 
@@ -541,7 +541,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
     while (ilen > 0) {
         if (*iptr == '\\') {
             if (ilen < 2) {
-                json_set_error("truncated escaped character");
+                c_set_error("truncated escaped character");
                 goto error;
             }
 
@@ -579,7 +579,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
                 ilen--;
 
                 if (ilen < 4) {
-                    json_set_error("truncated escaped unicode character");
+                    c_set_error("truncated escaped unicode character");
                     goto error;
                 }
 
@@ -590,7 +590,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
                     /* UTF-16 surrogate pair */
                     if (ilen < 10 || iptr[4] != '\\'
                      || (iptr[5] != 'u' && iptr[5] != 'U')) {
-                        json_set_error("truncated escaped surrogate pair");
+                        c_set_error("truncated escaped surrogate pair");
                         goto error;
                     }
 
@@ -618,7 +618,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
                     optr += nb_written;
                 }
             } else {
-                json_set_error("invalid escape sequence");
+                c_set_error("invalid escape sequence");
                 goto error;
             }
         } else {
@@ -633,7 +633,7 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
     return string;
 
 error:
-    json_free(string);
+    c_free(string);
     return NULL;
 }
 
@@ -641,11 +641,11 @@ static int
 json_decode_utf8_character(const char *str, uint32_t *pcodepoint) {
     int d1, d2, d3, d4;
 
-#define JSON_READ_HEX_DIGIT(var_, c_) \
-    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {      \
-        json_set_error_invalid_character((unsigned char)c_,             \
-                                         " in unicode sequence");       \
-        return -1;                                                      \
+#define JSON_READ_HEX_DIGIT(var_, c_)                              \
+    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) { \
+        json_set_error_invalid_character((unsigned char)c_,        \
+                                         " in unicode sequence");  \
+        return -1;                                                 \
     }
 
     JSON_READ_HEX_DIGIT(d1, str[0]);
@@ -663,11 +663,11 @@ json_decode_utf16_surrogate_pair(const char *str, uint32_t *pcodepoint) {
     int d1, d2, d3, d4;
     uint32_t hi, lo;
 
-#define JSON_READ_HEX_DIGIT(var_, c_) \
-    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {      \
-        json_set_error_invalid_character((unsigned char)c_,             \
-                                         " in unicode sequence");       \
-        return -1;                                                      \
+#define JSON_READ_HEX_DIGIT(var_, c_)                              \
+    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) { \
+        json_set_error_invalid_character((unsigned char)c_,        \
+                                         " in unicode sequence");  \
+        return -1;                                                 \
     }
 
     JSON_READ_HEX_DIGIT(d1, str[0]);
@@ -739,7 +739,7 @@ json_write_codepoint_as_utf8(uint32_t codepoint, char *out,
         *out++ = (char)(0x80 | ((codepoint >> 6) & 0x3f));
         *out++ = (char)(0x80 | (codepoint & 0x3f));
     } else {
-        json_set_error("invalid unicode codepoint U+%X", codepoint);
+        c_set_error("invalid unicode codepoint U+%X", codepoint);
         return -1;
     }
 

@@ -18,8 +18,6 @@
 #define LIBJSON_INTERNAL_H
 
 /* Errors */
-void json_set_error(const char *fmt, ...)
-    __attribute__((format(printf, 1, 2)));
 void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
@@ -63,4 +61,3 @@ struct json_value {
 struct json_value *json_value_new(enum json_type);
 
 #endif
-

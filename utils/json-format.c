@@ -164,7 +164,7 @@ json_load_file(const char *filename) {
 
     value = json_parse(data, len, JSON_PARSE_DEFAULT);
     if (!value)
-        json_die("%s", json_get_error());
+        json_die("%s", c_get_error());
 
     free(data);
 
@@ -181,7 +181,7 @@ json_write_to_file(const struct json_value *value, const char *filename,
 
     buf = json_value_format(value, opts, &len);
     if (!buf)
-        json_die("cannot format value: %s", json_get_error());
+        json_die("cannot format value: %s", c_get_error());
 
     if (strcmp(filename, "-") == 0) {
         filename = "stdout";
@@ -215,5 +215,5 @@ json_write_to_file(const struct json_value *value, const char *filename,
 
     close(fd);
 
-    json_free(buf);
+    c_free(buf);
 }

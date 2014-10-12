@@ -22,8 +22,6 @@
 #include "json.h"
 #include "internal.h"
 
-#include <buffer.h>
-
 enum json_ansi_color {
     JSON_ANSI_COLOR_BLACK   = 0,
     JSON_ANSI_COLOR_RED     = 1,
@@ -42,25 +40,25 @@ struct json_format_ctx {
     size_t indent;
 };
 
-static int json_format_value(const struct json_value *, struct bf_buffer *,
+static int json_format_value(const struct json_value *, struct c_buffer *,
                              struct json_format_ctx *);
 
-static int json_format_object(const struct json_object *, struct bf_buffer *,
+static int json_format_object(const struct json_object *, struct c_buffer *,
                               struct json_format_ctx *);
-static int json_format_array(const struct json_array *, struct bf_buffer *,
+static int json_format_array(const struct json_array *, struct c_buffer *,
                              struct json_format_ctx *);
-static int json_format_integer(int64_t, struct bf_buffer *,
+static int json_format_integer(int64_t, struct c_buffer *,
                                struct json_format_ctx *);
-static int json_format_real(double, struct bf_buffer *,
+static int json_format_real(double, struct c_buffer *,
                             struct json_format_ctx *);
-static int json_format_string(const char *, size_t, struct bf_buffer *,
+static int json_format_string(const char *, size_t, struct c_buffer *,
                               struct json_format_ctx *);
-static int json_format_boolean(bool, struct bf_buffer *,
+static int json_format_boolean(bool, struct c_buffer *,
                                struct json_format_ctx *);
-static int json_format_null(struct bf_buffer *,
+static int json_format_null(struct c_buffer *,
                             struct json_format_ctx *);
 
-static int json_format_indent(struct bf_buffer *, struct json_format_ctx *);
+static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
 
 static bool json_utf8_is_leading_byte(unsigned char);
 static bool json_utf8_is_continuation_byte(unsigned char);
@@ -69,16 +67,16 @@ static int json_utf8_decode_codepoint(const char *, uint32_t *, size_t *);
 
 #define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
-        if (bf_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) { \
-            json_set_error("%s", bf_get_error());                      \
+        if (c_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) {  \
+            c_set_error("%s", c_get_error());                       \
             return 1;                                                  \
         }                                                              \
     }
 
 #define JSON_CLEAR_ANSI_COLOR(ctx_, buf_)                \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {           \
-        if (bf_buffer_add_string(buf_, "\e[0m") == -1) { \
-            json_set_error("%s", bf_get_error());        \
+        if (c_buffer_add_string(buf_, "\e[0m") == -1) {  \
+            c_set_error("%s", c_get_error());         \
             return 1;                                    \
         }                                                \
     }
@@ -86,13 +84,13 @@ static int json_utf8_decode_codepoint(const char *, uint32_t *, size_t *);
 char *
 json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     struct json_format_ctx ctx;
-    struct bf_buffer *buf;
+    struct c_buffer *buf;
     char *data, *text;
     size_t length;
 
-    buf = bf_buffer_new(0);
+    buf = c_buffer_new();
     if (!buf) {
-        json_set_error("%s", bf_get_error());
+        c_set_error("%s", c_get_error());
         return NULL;
     }
 
@@ -103,34 +101,34 @@ json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
     if (json_format_value(value, buf, &ctx) == -1)
         goto error;
 
-    data = bf_buffer_extract(buf, &length);
+    data = c_buffer_extract(buf, &length);
     if (!data) {
-        json_set_error("%s", bf_get_error());
+        c_set_error("%s", c_get_error());
         goto error;
     }
 
-    text = json_malloc(length + 1);
+    text = c_malloc(length + 1);
     if (!text)
         goto error;
 
     memcpy(text, data, length);
     text[length] = '\0';
 
-    bf_free(data);
+    c_free(data);
 
     if (plen)
         *plen = length;
 
-    bf_buffer_delete(buf);
+    c_buffer_delete(buf);
     return text;
 
 error:
-    bf_buffer_delete(buf);
+    c_buffer_delete(buf);
     return NULL;
 }
 
 static int
-json_format_value(const struct json_value *value, struct bf_buffer *buf,
+json_format_value(const struct json_value *value, struct c_buffer *buf,
                   struct json_format_ctx *ctx) {
     switch (value->type) {
     case JSON_OBJECT:
@@ -156,21 +154,21 @@ json_format_value(const struct json_value *value, struct bf_buffer *buf,
         return json_format_null(buf, ctx);
     }
 
-    json_set_error("unknown json value type %d", value->type);
+    c_set_error("unknown json value type %d", value->type);
     return -1;
 }
 
 static int
-json_format_object(const struct json_object *object, struct bf_buffer *buf,
+json_format_object(const struct json_object *object, struct c_buffer *buf,
                    struct json_format_ctx *ctx) {
-    if (bf_buffer_add_string(buf, "{") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "{") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (bf_buffer_add_string(buf, "\n") == -1) {
-            json_set_error("%s", bf_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1) {
+            c_set_error("%s", c_get_error());
             return -1;
         }
 
@@ -183,14 +181,14 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
         member = object->members + i;
 
         if (i > 0) {
-            if (bf_buffer_add_string(buf, ", ") == -1) {
-                json_set_error("%s", bf_get_error());
+            if (c_buffer_add_string(buf, ", ") == -1) {
+                c_set_error("%s", c_get_error());
                 return -1;
             }
 
             if (ctx->opts & JSON_FORMAT_INDENT) {
-                if (bf_buffer_add_string(buf, "\n") == -1) {
-                    json_set_error("%s", bf_get_error());
+                if (c_buffer_add_string(buf, "\n") == -1) {
+                    c_set_error("%s", c_get_error());
                     return -1;
                 }
             }
@@ -204,8 +202,8 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
         if (json_format_value(member->key, buf, ctx) == -1)
             return -1;
 
-        if (bf_buffer_add_string(buf, ": ") == -1) {
-            json_set_error("%s", bf_get_error());
+        if (c_buffer_add_string(buf, ": ") == -1) {
+            c_set_error("%s", c_get_error());
             return -1;
         }
 
@@ -214,8 +212,8 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (bf_buffer_add_string(buf, "\n") == -1) {
-            json_set_error("%s", bf_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1) {
+            c_set_error("%s", c_get_error());
             return -1;
         }
 
@@ -225,8 +223,8 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
             return -1;
     }
 
-    if (bf_buffer_add_string(buf, "}") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "}") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
@@ -234,16 +232,16 @@ json_format_object(const struct json_object *object, struct bf_buffer *buf,
 }
 
 static int
-json_format_array(const struct json_array *array, struct bf_buffer *buf,
+json_format_array(const struct json_array *array, struct c_buffer *buf,
                   struct json_format_ctx *ctx) {
-    if (bf_buffer_add_string(buf, "[") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "[") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (bf_buffer_add_string(buf, "\n") == -1) {
-            json_set_error("%s", bf_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1) {
+            c_set_error("%s", c_get_error());
             return -1;
         }
 
@@ -256,14 +254,14 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
         child = array->elements[i];
 
         if (i > 0) {
-            if (bf_buffer_add_string(buf, ", ") == -1) {
-                json_set_error("%s", bf_get_error());
+            if (c_buffer_add_string(buf, ", ") == -1) {
+                c_set_error("%s", c_get_error());
                 return -1;
             }
 
             if (ctx->opts & JSON_FORMAT_INDENT) {
-                if (bf_buffer_add_string(buf, "\n") == -1) {
-                    json_set_error("%s", bf_get_error());
+                if (c_buffer_add_string(buf, "\n") == -1) {
+                    c_set_error("%s", c_get_error());
                     return -1;
                 }
             }
@@ -279,8 +277,8 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (bf_buffer_add_string(buf, "\n") == -1) {
-            json_set_error("%s", bf_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1) {
+            c_set_error("%s", c_get_error());
             return -1;
         }
 
@@ -290,8 +288,8 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
             return -1;
     }
 
-    if (bf_buffer_add_string(buf, "]") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "]") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
@@ -299,12 +297,12 @@ json_format_array(const struct json_array *array, struct bf_buffer *buf,
 }
 
 static int
-json_format_integer(int64_t integer, struct bf_buffer *buf,
+json_format_integer(int64_t integer, struct c_buffer *buf,
                     struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
 
-    if (bf_buffer_add_printf(buf, "%"PRIi64, integer) == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_printf(buf, "%"PRIi64, integer) == -1) {
+        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -314,12 +312,12 @@ json_format_integer(int64_t integer, struct bf_buffer *buf,
 }
 
 static int
-json_format_real(double real, struct bf_buffer *buf,
+json_format_real(double real, struct c_buffer *buf,
                  struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
 
-    if (bf_buffer_add_printf(buf, "%.17g", real) == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_printf(buf, "%.17g", real) == -1) {
+        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -329,13 +327,13 @@ json_format_real(double real, struct bf_buffer *buf,
 }
 
 static int
-json_format_string(const char *string, size_t length, struct bf_buffer *buf,
+json_format_string(const char *string, size_t length, struct c_buffer *buf,
                    struct json_format_ctx *ctx) {
     const char *ptr;
     size_t len;
 
-    if (bf_buffer_add_string(buf, "\"") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "\"") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
@@ -348,23 +346,23 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
         int ret;
 
         if (*ptr == '"') {
-            ret = bf_buffer_add_string(buf, "\\\"");
+            ret = c_buffer_add_string(buf, "\\\"");
         } else if (*ptr == '\\') {
-            ret = bf_buffer_add_string(buf, "\\\\");
+            ret = c_buffer_add_string(buf, "\\\\");
         } else if (*ptr == '/' && (ctx->opts & JSON_FORMAT_ESCAPE_SOLIDUS)) {
-            ret = bf_buffer_add_string(buf, "\\/");
+            ret = c_buffer_add_string(buf, "\\/");
         } else if (*ptr == '\b') {
-            ret = bf_buffer_add_string(buf, "\\b");
+            ret = c_buffer_add_string(buf, "\\b");
         } else if (*ptr == '\f') {
-            ret = bf_buffer_add_string(buf, "\\f");
+            ret = c_buffer_add_string(buf, "\\f");
         } else if (*ptr == '\n') {
-            ret = bf_buffer_add_string(buf, "\\n");
+            ret = c_buffer_add_string(buf, "\\n");
         } else if (*ptr == '\r') {
-            ret = bf_buffer_add_string(buf, "\\r");
+            ret = c_buffer_add_string(buf, "\\r");
         } else if (*ptr == '\t') {
-            ret = bf_buffer_add_string(buf, "\\t");
+            ret = c_buffer_add_string(buf, "\\t");
         } else if (isprint((unsigned char)*ptr)) {
-            ret = bf_buffer_add(buf, ptr, 1);
+            ret = c_buffer_add(buf, ptr, 1);
         } else if (json_utf8_is_leading_byte((unsigned char)*ptr)) {
             char tmp[13]; /* \uxxxx\uxxxx */
             uint32_t codepoint;
@@ -378,7 +376,7 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
             if (codepoint <= 0xffff) {
                 /* \uxxxx */
                 snprintf(tmp, sizeof(tmp), "\\u%04x", codepoint);
-                ret = bf_buffer_add(buf, tmp, 6);
+                ret = c_buffer_add(buf, tmp, 6);
             } else {
                 uint32_t hi, lo;
 
@@ -389,20 +387,20 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
 
                 /* \uxxxx\uxxxx */
                 snprintf(tmp, sizeof(tmp), "\\u%04x\\u%04x", hi, lo);
-                ret = bf_buffer_add(buf, tmp, 12);
+                ret = c_buffer_add(buf, tmp, 12);
             }
 
             ptr += sequence_length;
             len -= sequence_length;
             continue;
         } else {
-            json_set_error("invalid byte \\%hhu in utf8 string",
+            c_set_error("invalid byte \\%hhu in utf8 string",
                            (unsigned char)*ptr);
             goto error;
         }
 
         if (ret == -1) {
-            json_set_error("%s", bf_get_error());
+            c_set_error("%s", c_get_error());
             goto error;
         }
 
@@ -412,8 +410,8 @@ json_format_string(const char *string, size_t length, struct bf_buffer *buf,
 
     JSON_CLEAR_ANSI_COLOR(ctx, buf);
 
-    if (bf_buffer_add_string(buf, "\"") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "\"") == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 
@@ -425,12 +423,12 @@ error:
 }
 
 static int
-json_format_boolean(bool boolean, struct bf_buffer *buf,
+json_format_boolean(bool boolean, struct c_buffer *buf,
                     struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
 
-    if (bf_buffer_add_string(buf, boolean ? "true" : "false") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, boolean ? "true" : "false") == -1) {
+        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -440,11 +438,11 @@ json_format_boolean(bool boolean, struct bf_buffer *buf,
 }
 
 static int
-json_format_null(struct bf_buffer *buf, struct json_format_ctx *ctx) {
+json_format_null(struct c_buffer *buf, struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
 
-    if (bf_buffer_add_string(buf, "null") == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add_string(buf, "null") == -1) {
+        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -491,14 +489,14 @@ json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
 
     length = json_utf8_sequence_length((unsigned char)*ptr);
     if (length == 0) {
-        json_set_error("invalid leading byte \\%hhu in utf8 string",
+        c_set_error("invalid leading byte \\%hhu in utf8 string",
                        (unsigned char)*ptr);
         return -1;
     }
 
     for (size_t i = 0; i < length; i++) {
         if (ptr[i] == '\0') {
-            json_set_error("truncated sequence in utf8 string");
+            c_set_error("truncated sequence in utf8 string");
             return -1;
         }
     }
@@ -528,7 +526,7 @@ json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
                              | ((ptr[2] & 0x3f) << 18) | ((ptr[3] & 0x3f) << 12)
                              | ((ptr[4] & 0x3f) <<  6) |  (ptr[5] & 0x3f));
     } else {
-        json_set_error("invalid sequence in utf8 string");
+        c_set_error("invalid sequence in utf8 string");
         return -1;
     }
 
@@ -538,21 +536,21 @@ json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
 }
 
 static int
-json_format_indent(struct bf_buffer *buf, struct json_format_ctx *ctx) {
+json_format_indent(struct c_buffer *buf, struct json_format_ctx *ctx) {
     char *tmp;
 
     if (ctx->indent == 0) {
         return 0;
     } else if (ctx->indent > 0xffff) {
-        json_set_error("cannot indent text: nesting depth too high");
+        c_set_error("cannot indent text: nesting depth too high");
         return -1;
     }
 
     tmp = alloca(ctx->indent);
     memset(tmp, ' ', ctx->indent);
 
-    if (bf_buffer_add(buf, tmp, ctx->indent) == -1) {
-        json_set_error("%s", bf_get_error());
+    if (c_buffer_add(buf, tmp, ctx->indent) == -1) {
+        c_set_error("%s", c_get_error());
         return -1;
     }
 

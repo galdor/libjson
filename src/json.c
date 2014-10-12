@@ -25,7 +25,7 @@ struct json_value *
 json_value_new(enum json_type type) {
     struct json_value *value;
 
-    value = json_malloc(sizeof(struct json_value));
+    value = c_malloc(sizeof(struct json_value));
     memset(value, 0, sizeof(struct json_value));
 
     value->type = type;
@@ -44,17 +44,17 @@ json_value_delete(struct json_value *value) {
             json_value_delete(value->u.object.members[i].key);
             json_value_delete(value->u.object.members[i].value);
         }
-        json_free(value->u.object.members);
+        c_free(value->u.object.members);
         break;
 
     case JSON_ARRAY:
         for (size_t i = 0; i < value->u.array.nb_elements; i++)
             json_value_delete(value->u.array.elements[i]);
-        json_free(value->u.array.elements);
+        c_free(value->u.array.elements);
         break;
 
     case JSON_STRING:
-        json_free(value->u.string.ptr);
+        c_free(value->u.string.ptr);
         break;
 
     default:
@@ -62,7 +62,7 @@ json_value_delete(struct json_value *value) {
     }
 
     memset(value, 0, sizeof(struct json_value));
-    json_free(value);
+    c_free(value);
 }
 
 struct json_value *
@@ -142,7 +142,7 @@ json_value_clone(const struct json_value *value) {
         return json_null_new();
     }
 
-    json_set_error("unknown json value type %d", value->type);
+    c_set_error("unknown json value type %d", value->type);
     return NULL;
 }
 
@@ -216,10 +216,10 @@ json_object_add_member2(struct json_value *object_value, const char *key,
 
     if (object->nb_members == 0) {
         nb_members = 1;
-        members = json_malloc(sizeof(struct json_object_member));
+        members = c_malloc(sizeof(struct json_object_member));
     } else {
         nb_members = object->nb_members + 1;
-        members = json_realloc(object->members,
+        members = c_realloc(object->members,
                                nb_members * sizeof(struct json_object_member));
     }
 
@@ -326,7 +326,7 @@ struct json_object_iterator *
 json_object_iterate(struct json_value *value) {
     struct json_object_iterator *it;
 
-    it = json_malloc(sizeof(struct json_object_iterator));
+    it = c_malloc(sizeof(struct json_object_iterator));
     if (!it)
         return NULL;
     memset(it, 0, sizeof(struct json_object_iterator));
@@ -343,7 +343,7 @@ json_object_iterator_delete(struct json_object_iterator *it) {
         return;
 
     memset(it, 0, sizeof(struct json_object_iterator));
-    json_free(it);
+    c_free(it);
 }
 
 int
@@ -379,7 +379,7 @@ json_array_nb_elements(const struct json_value *value) {
 struct json_value *
 json_array_element(const struct json_value *value, size_t idx) {
     if (idx >= value->u.array.nb_elements) {
-        json_set_error("invalid index %zu", idx);
+        c_set_error("invalid index %zu", idx);
         return NULL;
     }
 
@@ -393,7 +393,7 @@ json_array_add_element(struct json_value *value, struct json_value *element) {
     size_t nb_elements;
 
     if (value->type != JSON_ARRAY) {
-        json_set_error("value is not an array");
+        c_set_error("value is not an array");
         return -1;
     }
 
@@ -401,10 +401,10 @@ json_array_add_element(struct json_value *value, struct json_value *element) {
 
     if (array->nb_elements == 0) {
         nb_elements = 1;
-        elements = json_malloc(sizeof(struct json_value *));
+        elements = c_malloc(sizeof(struct json_value *));
     } else {
         nb_elements = array->nb_elements + 1;
-        elements = json_realloc(array->elements,
+        elements = c_realloc(array->elements,
                                 nb_elements * sizeof(struct json_value *));
     }
 
@@ -464,7 +464,7 @@ json_string_new(const char *string) {
     length = strlen(string);
     value->u.string.len = length;
 
-    value->u.string.ptr = json_malloc(length + 1);
+    value->u.string.ptr = c_malloc(length + 1);
     if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;
@@ -494,7 +494,7 @@ json_string_new2(const char *string, size_t length) {
 
     value->u.string.len = length;
 
-    value->u.string.ptr = json_malloc(length + 1);
+    value->u.string.ptr = c_malloc(length + 1);
     if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;

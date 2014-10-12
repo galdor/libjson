@@ -23,7 +23,7 @@
     do {                                                           \
         value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error()); \
         }                                                          \
     } while (0)
 
@@ -33,7 +33,7 @@
     do {                                                           \
         value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error()); \
         }                                                          \
                                                                    \
         TEST_INT_EQ(json_value_type(value), JSON_ARRAY);           \
@@ -47,7 +47,7 @@
     do {                                                           \
         value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", json_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error()); \
         }                                                          \
                                                                    \
         TEST_INT_EQ(json_value_type(value), JSON_OBJECT);          \

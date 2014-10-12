@@ -22,62 +22,30 @@
 #include "json.h"
 #include "internal.h"
 
-#define JSON_ERROR_BUFSZ 1024U
-
-static __thread char json_error_buf[JSON_ERROR_BUFSZ];
-
-const char *
-json_get_error(void) {
-    return json_error_buf;
-}
-
-void
-json_set_error(const char *fmt, ...) {
-    char buf[JSON_ERROR_BUFSZ];
-    va_list ap;
-    int ret;
-
-    va_start(ap, fmt);
-    ret = vsnprintf(buf, JSON_ERROR_BUFSZ, fmt, ap);
-    va_end(ap);
-
-    if ((size_t)ret >= JSON_ERROR_BUFSZ)
-        ret = JSON_ERROR_BUFSZ - 1;
-
-    memcpy(json_error_buf, buf, (size_t)ret);
-    json_error_buf[ret] = '\0';
-}
-
 void
 json_set_error_invalid_character(unsigned char c, const char *fmt, ...) {
-    char buf[JSON_ERROR_BUFSZ];
+    char buf[C_ERROR_BUFSZ];
     va_list ap;
     char *ptr;
-    size_t len, prefix_len, msg_len;
+    size_t len, prefix_len;
     int ret;
 
     if (isprint(c)) {
-        ret = snprintf(buf, JSON_ERROR_BUFSZ, "invalid character '%c'", c);
+        ret = snprintf(buf, C_ERROR_BUFSZ, "invalid character '%c'", c);
     } else {
-        ret = snprintf(buf, JSON_ERROR_BUFSZ, "invalid character \\%hhu", c);
+        ret = snprintf(buf, C_ERROR_BUFSZ, "invalid character \\%hhu", c);
     }
 
     prefix_len = (size_t)ret;
-    if (prefix_len >= JSON_ERROR_BUFSZ)
+    if (prefix_len >= C_ERROR_BUFSZ)
         return;
 
     ptr = buf + prefix_len;
-    len = JSON_ERROR_BUFSZ - prefix_len;
+    len = C_ERROR_BUFSZ - prefix_len;
 
     va_start(ap, fmt);
     ret = vsnprintf(ptr, len, fmt, ap);
     va_end(ap);
 
-    msg_len = (size_t)ret;
-    len = prefix_len + msg_len;
-    if (len >= JSON_ERROR_BUFSZ)
-        len = JSON_ERROR_BUFSZ - 1;
-
-    memcpy(json_error_buf, buf, len);
-    json_error_buf[len] = '\0';
+    c_set_error("%s", buf);
 }

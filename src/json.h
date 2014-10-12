@@ -21,25 +21,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-/* Memory */
-struct json_memory_allocator {
-   void *(*malloc)(size_t sz);
-   void (*free)(void *ptr);
-   void *(*calloc)(size_t nb, size_t sz);
-   void *(*realloc)(void *ptr, size_t sz);
-};
-
-extern const struct json_memory_allocator *json_default_memory_allocator;
-
-void json_set_memory_allocator(const struct json_memory_allocator *allocator);
-
-void *json_malloc(size_t);
-void json_free(void *);
-void *json_calloc(size_t, size_t);
-void *json_realloc(void *, size_t);
-
-/* Errors */
-const char *json_get_error(void);
+#include <core.h>
 
 /* JSON */
 enum json_type {

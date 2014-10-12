@@ -133,7 +133,7 @@ json_validate_file(const char *filename) {
 
     value = json_parse(data, len, JSON_PARSE_DEFAULT);
     if (!value)
-        json_die("%s", json_get_error());
+        json_die("%s", c_get_error());
 
     json_value_delete(value);
     free(data);
