@@ -199,6 +199,20 @@ json_object_member2(const struct json_value *value,
     return NULL;
 }
 
+const char *
+json_object_nth_member(const struct json_value *value, size_t idx,
+                       const struct json_value **pvalue) {
+    const struct json_object *object;
+    const struct json_object_member *member;
+
+    object = &value->u.object;
+    member = object->members + idx;
+
+    if (pvalue)
+        *pvalue = member->value;
+    return member->key->u.string.ptr;
+}
+
 int
 json_object_add_member2(struct json_value *object_value, const char *key,
                         size_t len, struct json_value *value) {
