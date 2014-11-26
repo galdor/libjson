@@ -350,7 +350,6 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
         } else if (isprint((unsigned char)*ptr)) {
             ret = c_buffer_add(buf, ptr, 1);
         } else {
-            char tmp[13]; /* \uxxxx\uxxxx */
             uint32_t codepoint;
             size_t sequence_length;
 
@@ -361,8 +360,7 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
 
             if (codepoint <= 0xffff) {
                 /* \uxxxx */
-                snprintf(tmp, sizeof(tmp), "\\u%04x", codepoint);
-                ret = c_buffer_add(buf, tmp, 6);
+                ret = c_buffer_add_printf(buf, "\\u%04x", codepoint);
             } else {
                 uint32_t hi, lo;
 
@@ -372,8 +370,7 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
                 lo = (codepoint & 0x3ff) + 0xdc00;
 
                 /* \uxxxx\uxxxx */
-                snprintf(tmp, sizeof(tmp), "\\u%04x\\u%04x", hi, lo);
-                ret = c_buffer_add(buf, tmp, 12);
+                ret = c_buffer_add_printf(buf, "\\u%04x\\u%04x", hi, lo);
             }
 
             ptr += sequence_length;
