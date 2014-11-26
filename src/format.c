@@ -60,11 +60,6 @@ static int json_format_null(struct c_buffer *,
 
 static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
 
-static bool json_utf8_is_leading_byte(unsigned char);
-static bool json_utf8_is_continuation_byte(unsigned char);
-static size_t json_utf8_sequence_length(unsigned char);
-static int json_utf8_decode_codepoint(const char *, uint32_t *, size_t *);
-
 #define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
         if (c_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) {  \
@@ -354,13 +349,13 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
             ret = c_buffer_add_string(buf, "\\t");
         } else if (isprint((unsigned char)*ptr)) {
             ret = c_buffer_add(buf, ptr, 1);
-        } else if (json_utf8_is_leading_byte((unsigned char)*ptr)) {
+        } else {
             char tmp[13]; /* \uxxxx\uxxxx */
             uint32_t codepoint;
             size_t sequence_length;
 
-            if (json_utf8_decode_codepoint(ptr, &codepoint,
-                                           &sequence_length) == -1) {
+            if (c_utf8_read_codepoint(ptr, &codepoint,
+                                      &sequence_length) == -1) {
                 goto error;
             }
 
@@ -384,10 +379,6 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
             ptr += sequence_length;
             len -= sequence_length;
             continue;
-        } else {
-            c_set_error("invalid byte \\%hhu in utf8 string",
-                           (unsigned char)*ptr);
-            goto error;
         }
 
         if (ret == -1) {
@@ -439,90 +430,6 @@ json_format_null(struct c_buffer *buf, struct json_format_ctx *ctx) {
     }
 
     JSON_CLEAR_ANSI_COLOR(ctx, buf);
-    return 0;
-}
-
-static bool
-json_utf8_is_leading_byte(unsigned char c) {
-    return ((c & 0x80) == 0x00) /* one byte character */
-        || ((c & 0xc0) == 0xc0);
-}
-
-static bool
-json_utf8_is_continuation_byte(unsigned char c) {
-    return (c & 0xc0) == 0x80;
-}
-
-static size_t
-json_utf8_sequence_length(unsigned char c) {
-    if ((c & 0x80) == 0x0) {
-        return 1;
-    } else if ((c & 0xe0) == 0xc0) {
-        return 2;
-    } else if ((c & 0xf0) == 0xe0) {
-        return 3;
-    } else if ((c & 0xf8) == 0xf0) {
-        return 4;
-    } else if ((c & 0xfc) == 0xf8) {
-        return 5;
-    } else if ((c & 0xfe) == 0xfc) {
-        return 6;
-    } else {
-        return 0;
-    }
-}
-
-static int
-json_utf8_decode_codepoint(const char *ptr, uint32_t *pcodepoint,
-                           size_t *p_sequence_length) {
-    uint32_t codepoint;
-    size_t length;
-
-    length = json_utf8_sequence_length((unsigned char)*ptr);
-    if (length == 0) {
-        c_set_error("invalid leading byte \\%hhu in utf8 string",
-                       (unsigned char)*ptr);
-        return -1;
-    }
-
-    for (size_t i = 0; i < length; i++) {
-        if (ptr[i] == '\0') {
-            c_set_error("truncated sequence in utf8 string");
-            return -1;
-        }
-    }
-
-    if (length == 1) {
-        /* 0xxxxxxx */
-        codepoint = (uint32_t)((ptr[0] & 0x7f));
-    } else if (length == 2) {
-        /* 110xxxxx 10xxxxxx */
-        codepoint = (uint32_t)(((ptr[0] & 0x1f) << 6) | (ptr[1] & 0x3f));
-    } else if (length == 3) {
-        /* 1110xxxx 10xxxxxx 10xxxxxx */
-        codepoint = (uint32_t)(((ptr[0] & 0x0f) << 12) | ((ptr[1] & 0x3f) << 6)
-                             |  (ptr[2] & 0x3f));
-    } else if (length == 4) {
-        /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-        codepoint = (uint32_t)(((ptr[0] & 0x0d) << 18) | ((ptr[1] & 0x3f) << 12)
-                             | ((ptr[2] & 0x3f) <<  6) |  (ptr[3] & 0x3f));
-    } else if (length == 5) {
-        /* 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-        codepoint = (uint32_t)(((ptr[0] & 0x03) << 24) | ((ptr[1] & 0x3f) << 18)
-                             | ((ptr[2] & 0x3f) << 12) | ((ptr[3] & 0x3f) <<  6)
-                             |  (ptr[4] & 0x3f));
-    } else if (length == 6) {
-        /* 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-        codepoint = (uint32_t)(((ptr[0] & 0x01) << 30) | ((ptr[1] & 0x3f) << 24)
-                             | ((ptr[2] & 0x3f) << 18) | ((ptr[3] & 0x3f) << 12)
-                             | ((ptr[4] & 0x3f) <<  6) |  (ptr[5] & 0x3f));
-    } else {
-        c_set_error("invalid sequence in utf8 string");
-        return -1;
-    }
-
-    *pcodepoint = codepoint;
-    *p_sequence_length = length;
     return 0;
 }
 
