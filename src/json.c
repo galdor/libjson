@@ -201,7 +201,7 @@ json_object_member2(const struct json_value *value,
 
 const char *
 json_object_nth_member(const struct json_value *value, size_t idx,
-                       const struct json_value **pvalue) {
+                       struct json_value **pvalue) {
     const struct json_object *object;
     const struct json_object_member *member;
 

@@ -64,7 +64,7 @@ struct json_value *json_object_member(const struct json_value *, const char *);
 struct json_value *json_object_member2(const struct json_value *,
                                        const char *, size_t);
 const char *json_object_nth_member(const struct json_value *, size_t,
-                                   const struct json_value **);
+                                   struct json_value **);
 int json_object_add_member2(struct json_value *, const char *, size_t,
                             struct json_value *);
 int json_object_add_member(struct json_value *, const char *,
