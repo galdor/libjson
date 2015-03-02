@@ -174,6 +174,17 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
             goto error;
         }
 
+        if (parser->options & JSON_PARSE_REJECT_DUPLICATE_KEYS) {
+            if (json_object_has_member2(object_value,
+                                        key->u.string.ptr,
+                                        key->u.string.len)) {
+                c_set_error("duplicate object key");
+                json_value_delete(key);
+                json_value_delete(value);
+                goto error;
+            }
+        }
+
         if (json_object_add_member2(object_value, key->u.string.ptr,
                                     key->u.string.len, value) == -1) {
             json_value_delete(key);

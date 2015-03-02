@@ -361,6 +361,8 @@ TEST(invalid_objects) {
     JSONT_IS_INVALID("{\"a\": 1,}", JSON_PARSE_DEFAULT);
     JSONT_IS_INVALID("{\"a\": 1 ,}", JSON_PARSE_DEFAULT);
     JSONT_IS_INVALID("{\"a\": 1 , }", JSON_PARSE_DEFAULT);
+
+    JSONT_IS_INVALID("{\"a\": 1, \"a\": 2}", JSON_PARSE_REJECT_DUPLICATE_KEYS);
 }
 
 int
