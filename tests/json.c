@@ -136,6 +136,7 @@ TEST(null) {
 
 TEST(objects) {
     struct json_value *value, *child;
+    const char *key;
 
     JSONT_BEGIN_OBJECT("{}", 0, JSON_PARSE_DEFAULT);
     JSONT_END();
@@ -192,6 +193,25 @@ TEST(objects) {
     JSONT_INTEGER_EQ(json_object_member(child, "ba"), 1);
     TEST_TRUE(json_object_has_member(child, "bb"));
     JSONT_INTEGER_EQ(json_object_member(child, "bb"), 2);
+    JSONT_END();
+
+    /* Duplicate keys */
+    JSONT_BEGIN_OBJECT("{\"a\": 1, \"a\": 2}", 2, JSON_PARSE_DEFAULT);
+    TEST_UINT_EQ(json_object_nb_members(value), 2);
+    TEST_TRUE(json_object_has_member(value, "a"));
+    child = json_object_member(value, "a");
+    TEST_PTR_NOT_NULL(child);
+    JSONT_INTEGER_EQ(child, 1);
+    key = json_object_nth_member(value, 0, &child);
+    TEST_PTR_NOT_NULL(key);
+    TEST_STRING_EQ(key, "a");
+    TEST_PTR_NOT_NULL(child);
+    JSONT_INTEGER_EQ(child, 1);
+    key = json_object_nth_member(value, 1, &child);
+    TEST_PTR_NOT_NULL(key);
+    TEST_STRING_EQ(key, "a");
+    TEST_PTR_NOT_NULL(child);
+    JSONT_INTEGER_EQ(child, 2);
     JSONT_END();
 }
 
