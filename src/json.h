@@ -37,7 +37,7 @@ enum json_type {
 struct json_value;
 
 enum json_parse_option {
-    JSON_PARSE_DEFAULT = 0x00,
+    JSON_PARSE_DEFAULT = 0,
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
@@ -48,10 +48,11 @@ struct json_value *json_value_clone(const struct json_value *);
 enum json_type json_value_type(const struct json_value *);
 
 enum json_format_option {
-    JSON_FORMAT_DEFAULT        = 0x00,
-    JSON_FORMAT_INDENT         = 0x01,
-    JSON_FORMAT_COLOR_ANSI     = 0x02,
-    JSON_FORMAT_ESCAPE_SOLIDUS = 0x04,
+    JSON_FORMAT_DEFAULT        = 0,
+
+    JSON_FORMAT_INDENT         = (1 << 0),
+    JSON_FORMAT_COLOR_ANSI     = (1 << 1),
+    JSON_FORMAT_ESCAPE_SOLIDUS = (1 << 2),
 };
 
 char *json_value_format(const struct json_value *, uint32_t, size_t *);
