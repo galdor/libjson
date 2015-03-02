@@ -63,7 +63,7 @@ static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
 #define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
         if (c_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) {  \
-            c_set_error("%s", c_get_error());                       \
+            c_set_error("%s", c_get_error());                          \
             return 1;                                                  \
         }                                                              \
     }
@@ -71,7 +71,7 @@ static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
 #define JSON_CLEAR_ANSI_COLOR(ctx_, buf_)                \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {           \
         if (c_buffer_add_string(buf_, "\e[0m") == -1) {  \
-            c_set_error("%s", c_get_error());         \
+            c_set_error("%s", c_get_error());            \
             return 1;                                    \
         }                                                \
     }
