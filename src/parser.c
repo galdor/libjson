@@ -45,7 +45,8 @@ static bool json_is_number_char(int);
 static bool json_is_integer_char(int);
 static bool json_is_real_char(int);
 
-static char *json_decode_string(const char *, size_t, size_t *);
+static char *json_decode_string(const struct json_parser *,
+                                const char *, size_t, size_t *);
 static int json_decode_utf8_character(const char *, uint32_t *);
 static int json_decode_utf16_surrogate_pair(const char *, uint32_t *);
 static int json_write_codepoint_as_utf8(uint32_t, char *, size_t *);
@@ -449,7 +450,7 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
 
     toklen = (size_t)(parser->ptr - start);
 
-    value->u.string.ptr = json_decode_string(start, toklen,
+    value->u.string.ptr = json_decode_string(parser, start, toklen,
                                              &value->u.string.len);
     if (!value->u.string.ptr) {
         json_value_delete(value);
@@ -534,7 +535,8 @@ json_is_real_char(int c) {
 }
 
 static char *
-json_decode_string(const char *buf, size_t sz, size_t *plen) {
+json_decode_string(const struct json_parser *parser,
+                   const char *buf, size_t sz, size_t *plen) {
     const char *iptr;
     char *string, *optr;
     size_t ilen = sz;
@@ -597,6 +599,13 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
                 if (json_decode_utf8_character(iptr, &codepoint) == -1)
                     goto error;
 
+                if (parser->options & JSON_PARSE_REJECT_NULL_CHARACTERS) {
+                    if (codepoint == 0) {
+                        c_set_error("invalid null character");
+                        goto error;
+                    }
+                }
+
                 if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
                     /* UTF-16 surrogate pair */
                     if (ilen < 10 || iptr[4] != '\\'
@@ -628,6 +637,10 @@ json_decode_string(const char *buf, size_t sz, size_t *plen) {
                     ilen -= 4;
                     optr += nb_written;
                 }
+            } else if (*iptr == '\0'
+                    && parser->options & JSON_PARSE_REJECT_NULL_CHARACTERS) {
+                c_set_error("invalid null character");
+                goto error;
             } else {
                 c_set_error("invalid escape sequence");
                 goto error;

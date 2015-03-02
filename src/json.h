@@ -37,9 +37,10 @@ enum json_type {
 struct json_value;
 
 enum json_parse_option {
-    JSON_PARSE_DEFAULT               = 0,
+    JSON_PARSE_DEFAULT                = 0,
 
-    JSON_PARSE_REJECT_DUPLICATE_KEYS = (1 << 0),
+    JSON_PARSE_REJECT_DUPLICATE_KEYS  = (1 << 0),
+    JSON_PARSE_REJECT_NULL_CHARACTERS = (1 << 1),
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
