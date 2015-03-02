@@ -26,8 +26,6 @@
 
 static void json_die(const char *, ...)
     __attribute__ ((format(printf, 1, 2), noreturn));
-static void json_usage(const char *, int)
-    __attribute__ ((noreturn));
 
 static struct json_value *json_load_file(const char *);
 static void json_write_to_file(const struct json_value *, const char *,
@@ -35,68 +33,46 @@ static void json_write_to_file(const struct json_value *, const char *,
 
 int
 main(int argc, char **argv) {
+    struct c_command_line *cmdline;
     const char *ifilename, *ofilename;
     struct json_value *value;
-    int opt, nb_opts;
     uint32_t format_opts;
+
+    cmdline = c_command_line_new();
+
+    c_command_line_add_flag(cmdline, "c", "color", "colorize output");
+    c_command_line_add_flag(cmdline, "i", "indent", "indent output");
+    c_command_line_add_flag(cmdline, "s", "escape-solidus",
+                            "escape solidus characters");
+
+    c_command_line_add_option(cmdline, "o", "output",
+                              "write the output to a file", "file", "-");
+
+    c_command_line_add_argument(cmdline, "the file to format", "file");
+
+    if (c_command_line_parse(cmdline, argc, argv) == -1)
+        json_die("%s", c_get_error());
 
     format_opts = JSON_FORMAT_DEFAULT;
 
-    opterr = 0;
-    while ((opt = getopt(argc, argv, "chis")) != -1) {
-        switch (opt) {
-        case 'c':
-            format_opts |= JSON_FORMAT_COLOR_ANSI;
-            break;
+    if (c_command_line_is_option_set(cmdline, "color"))
+        format_opts |= JSON_FORMAT_COLOR_ANSI;
 
-        case 'h':
-            json_usage(argv[0], 0);
-            break;
+    if (c_command_line_is_option_set(cmdline, "indent"))
+        format_opts |= JSON_FORMAT_INDENT;
 
-        case 'i':
-            format_opts |= JSON_FORMAT_INDENT;
-            break;
+    if (c_command_line_is_option_set(cmdline, "escape-solidus"))
+        format_opts |= JSON_FORMAT_ESCAPE_SOLIDUS;
 
-        case 's':
-            format_opts |= JSON_FORMAT_ESCAPE_SOLIDUS;
-            break;
-
-        case '?':
-            json_usage(argv[0], 1);
-        }
-    }
-
-    nb_opts = argc - optind;
-
-    if (nb_opts == 0) {
-        ifilename = "-";
-        ofilename = "-";
-    } else if (nb_opts == 1) {
-        ifilename = argv[optind];
-        ofilename = "-";
-    } else {
-        ifilename = argv[optind];
-        ofilename = argv[optind + 1];
-    }
+    ifilename = c_command_line_argument_value(cmdline, 0);
+    ofilename = c_command_line_option_value(cmdline, "output");
 
     value = json_load_file(ifilename);
     json_write_to_file(value, ofilename, format_opts);
     json_value_delete(value);
 
+    c_command_line_delete(cmdline);
     return 0;
-}
-
-static void
-json_usage(const char *argv0, int exit_code) {
-    printf("Usage: %s [-chis] <filename>\n"
-            "\n"
-            "Options:\n"
-            "  -c colorize output using ansi escape sequences\n"
-            "  -h display help\n"
-            "  -i indent output\n"
-            "  -s escape solidus characters\n",
-            argv0);
-    exit(exit_code);
 }
 
 void

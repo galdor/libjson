@@ -26,46 +26,26 @@
 
 static void json_die(const char *, ...)
     __attribute__ ((format(printf, 1, 2), noreturn));
-static void json_usage(const char *, int)
-    __attribute__ ((noreturn));
 static void json_validate_file(const char *);
 
 int
 main(int argc, char **argv) {
+    struct c_command_line *cmdline;
     const char *filename;
-    int opt, nb_opts;
 
-    opterr = 0;
-    while ((opt = getopt(argc, argv, "h")) != -1) {
-        switch (opt) {
-        case 'h':
-            json_usage(argv[0], 0);
-            break;
+    cmdline = c_command_line_new();
 
-        case '?':
-            json_usage(argv[0], 1);
-        }
-    }
+    c_command_line_add_argument(cmdline, "the file to validate", "file");
 
-    nb_opts = argc - optind;
-    if (nb_opts >= 1) {
-        filename = argv[optind];
-    } else {
-        filename = "-";
-    }
+    if (c_command_line_parse(cmdline, argc, argv) == -1)
+        json_die("%s", c_get_error());
+
+    filename = c_command_line_argument_value(cmdline, 0);
 
     json_validate_file(filename);
-    return 0;
-}
 
-static void
-json_usage(const char *argv0, int exit_code) {
-    printf("Usage: %s [-h] <filename>\n"
-            "\n"
-            "Options:\n"
-            "  -h display help\n",
-            argv0);
-    exit(exit_code);
+    c_command_line_delete(cmdline);
+    return 0;
 }
 
 void
