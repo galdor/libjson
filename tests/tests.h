@@ -19,43 +19,43 @@
 
 #include <utest.h>
 
-#define JSONT_BEGIN2(str_, len_)                                   \
+#define JSONT_BEGIN2(str_, len_, opts_)                            \
     do {                                                           \
-        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        value = json_parse(str_, len_, opts_);                     \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", c_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error());    \
         }                                                          \
     } while (0)
 
-#define JSONT_BEGIN(str_) JSONT_BEGIN2(str_, strlen(str_))
+#define JSONT_BEGIN(str_, opts_) JSONT_BEGIN2(str_, strlen(str_), opts_)
 
-#define JSONT_BEGIN_ARRAY2(str_, len_, nb_elements_)               \
+#define JSONT_BEGIN_ARRAY2(str_, len_, nb_elements_, opts_)        \
     do {                                                           \
-        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        value = json_parse(str_, len_, opts_);                     \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", c_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error());    \
         }                                                          \
                                                                    \
         TEST_INT_EQ(json_value_type(value), JSON_ARRAY);           \
         TEST_UINT_EQ(json_array_nb_elements(value), nb_elements_); \
     } while (0)
 
-#define JSONT_BEGIN_ARRAY(str_, nb_elements_) \
-    JSONT_BEGIN_ARRAY2(str_, strlen(str_), nb_elements_)
+#define JSONT_BEGIN_ARRAY(str_, nb_elements_, opts_)               \
+    JSONT_BEGIN_ARRAY2(str_, strlen(str_), nb_elements_, opts_)
 
-#define JSONT_BEGIN_OBJECT2(str_, len_, nb_members_)               \
+#define JSONT_BEGIN_OBJECT2(str_, len_, nb_members_, opts_)        \
     do {                                                           \
-        value = json_parse(str_, len_, JSON_PARSE_DEFAULT);        \
+        value = json_parse(str_, len_, opts_);                     \
         if (!value) {                                              \
-            TEST_ABORT("cannot parse json: %s", c_get_error()); \
+            TEST_ABORT("cannot parse json: %s", c_get_error());    \
         }                                                          \
                                                                    \
         TEST_INT_EQ(json_value_type(value), JSON_OBJECT);          \
         TEST_UINT_EQ(json_object_nb_members(value), nb_members_);  \
     } while (0)
 
-#define JSONT_BEGIN_OBJECT(str_, nb_members_) \
-    JSONT_BEGIN_OBJECT2(str_, strlen(str_), nb_members_)
+#define JSONT_BEGIN_OBJECT(str_, nb_members_, opts_) \
+    JSONT_BEGIN_OBJECT2(str_, strlen(str_), nb_members_, opts_)
 
 #define JSONT_END(str_) json_value_delete(value)
 
@@ -94,12 +94,12 @@
 #define JSONT_NULL_EQ(value_) \
     TEST_INT_EQ(json_value_type(value_), JSON_NULL)
 
-#define JSONT_IS_INVALID(str_)                                      \
-    do {                                                            \
-        struct json_value *value;                                   \
-        value = json_parse(str_, strlen(str_), JSON_PARSE_DEFAULT); \
-        if (value)                                                  \
-            TEST_ABORT("parsed invalid json");                      \
+#define JSONT_IS_INVALID(str_, opts_)                  \
+    do {                                               \
+        struct json_value *value;                      \
+        value = json_parse(str_, strlen(str_), opts_); \
+        if (value)                                     \
+            TEST_ABORT("parsed invalid json");         \
     } while (0)
 
 #endif
