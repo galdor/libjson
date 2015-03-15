@@ -490,8 +490,10 @@ json_object_sort_by_index(struct json_object *object) {
 
 void
 json_object_sort_by_key(struct json_object *object) {
-    if (object->sort_mode == JSON_OBJECT_SORTED_BY_KEY)
+    if (object->sort_mode == JSON_OBJECT_SORTED_BY_KEY
+     || object->sort_mode == JSON_OBJECT_SORTED_BY_KEY_VALUE) {
         return;
+    }
 
     qsort(object->members, object->nb_members,
           sizeof(struct json_object_member),
