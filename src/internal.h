@@ -32,6 +32,7 @@ enum json_object_sort_mode {
     JSON_OBJECT_UNSORTED = 0,
     JSON_OBJECT_SORTED_BY_INDEX,
     JSON_OBJECT_SORTED_BY_KEY,
+    JSON_OBJECT_SORTED_BY_KEY_VALUE,
 };
 
 struct json_object {
@@ -42,6 +43,7 @@ struct json_object {
 
 void json_object_sort_by_index(struct json_object *);
 void json_object_sort_by_key(struct json_object *);
+void json_object_sort_by_key_value(struct json_object *);
 
 struct json_object_iterator {
     struct json_object *object;
@@ -70,5 +72,12 @@ struct json_value {
 };
 
 struct json_value *json_value_new(enum json_type);
+
+void json_value_sort_objects_by_index(struct json_value *);
+
+/* JSON schema */
+struct json_schema {
+    char *title;
+};
 
 #endif

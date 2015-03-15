@@ -28,8 +28,7 @@ static void json_die(const char *, ...)
     __attribute__ ((format(printf, 1, 2), noreturn));
 
 static struct json_value *json_load_file(const char *);
-static void json_write_to_file(const struct json_value *, const char *,
-                               uint32_t);
+static void json_write_to_file(struct json_value *, const char *, uint32_t);
 
 int
 main(int argc, char **argv) {
@@ -148,7 +147,7 @@ json_load_file(const char *filename) {
 }
 
 static void
-json_write_to_file(const struct json_value *value, const char *filename,
+json_write_to_file(struct json_value *value, const char *filename,
                    uint32_t opts) {
     const char *ptr;
     size_t len;

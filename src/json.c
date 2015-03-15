@@ -21,8 +21,11 @@
 #include "json.h"
 #include "internal.h"
 
+static int json_value_cmp(const void *, const void *);
+
 static int json_object_member_cmp_by_index(const void *, const void *);
 static int json_object_member_cmp_by_key(const void *, const void *);
+static int json_object_member_cmp_by_key_value(const void *, const void *);
 
 struct json_value *
 json_value_new(enum json_type type) {
@@ -147,6 +150,79 @@ json_value_clone(const struct json_value *value) {
 
     c_set_error("unknown json value type %d", value->type);
     return NULL;
+}
+
+bool
+json_value_equal(struct json_value *val1, struct json_value *val2) {
+    struct json_object_member *members1, *members2;
+    size_t nb_members;
+
+    if (val1->type != val2->type)
+        return false;
+
+    switch (val1->type) {
+    case JSON_OBJECT:
+        if (val1->u.object.nb_members != val2->u.object.nb_members)
+            return false;
+
+        json_object_sort_by_key_value(&val1->u.object);
+        json_object_sort_by_key_value(&val2->u.object);
+
+        nb_members = val1->u.object.nb_members;
+        members1 = val1->u.object.members;
+        members2 = val2->u.object.members;
+
+        for (size_t i = 0; i < nb_members; i++) {
+            if (!json_value_equal(members1[i].key, members2[i].key)
+             || !json_value_equal(members1[i].value, members2[i].value)) {
+                return false;
+            }
+        }
+
+        return true;
+
+    case JSON_ARRAY:
+        if (val1->u.array.nb_elements != val2->u.array.nb_elements)
+            return false;
+
+        for (size_t i = 0; i < val1->u.array.nb_elements; i++) {
+            if (!json_value_equal(json_array_element(val1, i),
+                                  json_array_element(val2, i))) {
+                return false;
+            }
+        }
+
+        return true;
+
+    case JSON_INTEGER:
+        return val1->u.integer == val2->u.integer;
+
+    case JSON_REAL:
+        return val1->u.real == val2->u.real;
+
+    case JSON_STRING:
+        if (val1->u.string.len != val2->u.string.len)
+            return false;
+
+        return memcmp(val1->u.string.ptr, val2->u.string.ptr,
+                      val1->u.string.len) == 0;
+
+    case JSON_BOOLEAN:
+        return val1->u.boolean == val2->u.boolean;
+
+    case JSON_NULL:
+        return true;
+    }
+}
+
+void
+json_value_sort_objects_by_index(struct json_value *value) {
+    if (value->type == JSON_OBJECT) {
+        json_object_sort_by_index(&value->u.object);
+
+        for (size_t i = 0; i < value->u.object.nb_members; i++)
+            json_value_sort_objects_by_index(value->u.object.members[i].value);
+    }
 }
 
 enum json_type
@@ -406,7 +482,8 @@ json_object_sort_by_index(struct json_object *object) {
         return;
 
     qsort(object->members, object->nb_members,
-          sizeof(struct json_object_member), json_object_member_cmp_by_index);
+          sizeof(struct json_object_member),
+          json_object_member_cmp_by_index);
 
     object->sort_mode = JSON_OBJECT_SORTED_BY_INDEX;
 }
@@ -417,9 +494,22 @@ json_object_sort_by_key(struct json_object *object) {
         return;
 
     qsort(object->members, object->nb_members,
-          sizeof(struct json_object_member), json_object_member_cmp_by_key);
+          sizeof(struct json_object_member),
+          json_object_member_cmp_by_key);
 
     object->sort_mode = JSON_OBJECT_SORTED_BY_KEY;
+}
+
+void
+json_object_sort_by_key_value(struct json_object *object) {
+    if (object->sort_mode == JSON_OBJECT_SORTED_BY_KEY_VALUE)
+        return;
+
+    qsort(object->members, object->nb_members,
+          sizeof(struct json_object_member),
+          json_object_member_cmp_by_key_value);
+
+    object->sort_mode = JSON_OBJECT_SORTED_BY_KEY_VALUE;
 }
 
 struct json_value *
@@ -583,6 +673,95 @@ json_null_new() {
 }
 
 static int
+json_value_cmp(const void *arg1, const void *arg2) {
+    const struct json_value *val1, *val2;
+
+    val1 = arg1;
+    val2 = arg2;
+
+    if (val1->type < val2->type) {
+        return -1;
+    } else if (val1->type > val2->type) {
+        return 1;
+    }
+
+    switch (val1->type) {
+    case JSON_OBJECT:
+        if (val1->u.object.nb_members != val2->u.object.nb_members) {
+            return -1;
+        } else if (val1->u.object.nb_members != val2->u.object.nb_members) {
+            return 1;
+        }
+
+        for (size_t i = 0; i < val1->u.object.nb_members; i++) {
+            const char *key1, *key2;
+            struct json_value *mval1, *mval2;
+            int ret;
+
+            key1 = json_object_nth_member(val1, i, &mval1);
+            key2 = json_object_nth_member(val2, i, &mval2);
+
+            ret = strcmp(key1, key2);
+            if (ret != 0)
+                return ret;
+
+            return json_value_cmp(mval1, mval2);
+        }
+
+        return 0;
+
+    case JSON_ARRAY:
+        if (val1->u.array.nb_elements > val2->u.array.nb_elements) {
+            return -1;
+        } else if (val1->u.array.nb_elements > val2->u.array.nb_elements) {
+            return 0;
+        }
+
+        for (size_t i = 0; i < val1->u.array.nb_elements; i++) {
+            int ret;
+
+            ret = json_value_equal(json_array_element(val1, i),
+                                   json_array_element(val2, i));
+            if (ret != 0)
+                return ret;
+        }
+
+        return 0;
+
+    case JSON_INTEGER:
+        if (val1->u.integer < val2->u.integer) {
+            return -1;
+        } else if (val1->u.integer > val2->u.integer) {
+            return 1;
+        }
+
+        return 0;
+
+    case JSON_REAL:
+        if (val1->u.real < val2->u.real) {
+            return -1;
+        } else if (val1->u.real > val2->u.real) {
+            return 1;
+        }
+
+        return 0;
+
+    case JSON_STRING:
+        return strcmp(val1->u.string.ptr, val2->u.string.ptr);
+
+    case JSON_BOOLEAN:
+        if (val1->u.boolean) {
+            return val2->u.boolean ? 0 : 1;
+        } else {
+            return val2->u.boolean ? -1 : 0;
+        }
+
+    case JSON_NULL:
+        return 0;
+    }
+}
+
+static int
 json_object_member_cmp_by_index(const void *arg1, const void *arg2) {
     const struct json_object_member *member1, *member2;
 
@@ -606,4 +785,19 @@ json_object_member_cmp_by_key(const void *arg1, const void *arg2) {
     member2 = arg2;
 
     return strcmp(member1->key->u.string.ptr, member2->key->u.string.ptr);
+}
+
+static int
+json_object_member_cmp_by_key_value(const void *arg1, const void *arg2) {
+    const struct json_object_member *member1, *member2;
+    int ret;
+
+    member1 = arg1;
+    member2 = arg2;
+
+    ret = strcmp(member1->key->u.string.ptr, member2->key->u.string.ptr);
+    if (ret != 0)
+        return ret;
+
+    return json_value_cmp(member1->value, member2->value);
 }

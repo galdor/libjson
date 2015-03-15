@@ -44,9 +44,9 @@ enum json_parse_option {
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
-
 void json_value_delete(struct json_value *);
 struct json_value *json_value_clone(const struct json_value *);
+bool json_value_equal(struct json_value *, struct json_value *);
 
 enum json_type json_value_type(const struct json_value *);
 
@@ -58,7 +58,7 @@ enum json_format_option {
     JSON_FORMAT_ESCAPE_SOLIDUS = (1 << 2),
 };
 
-char *json_value_format(const struct json_value *, uint32_t, size_t *);
+char *json_value_format(struct json_value *, uint32_t, size_t *);
 
 struct json_value *json_object_new(void);
 size_t json_object_nb_members(const struct json_value *);
@@ -105,6 +105,8 @@ struct json_value *json_boolean_new(bool);
 bool json_boolean_value(const struct json_value *);
 
 struct json_value *json_null_new(void);
+
+/* JSON schema */
 
 #endif
 

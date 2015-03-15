@@ -77,11 +77,13 @@ static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
     }
 
 char *
-json_value_format(const struct json_value *value, uint32_t opts, size_t *plen) {
+json_value_format(struct json_value *value, uint32_t opts, size_t *plen) {
     struct json_format_ctx ctx;
     struct c_buffer *buf;
     char *data;
     size_t length;
+
+    json_value_sort_objects_by_index(value);
 
     buf = c_buffer_new();
     if (!buf) {

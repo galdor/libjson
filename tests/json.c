@@ -370,6 +370,162 @@ TEST(invalid_objects) {
     JSONT_IS_INVALID("{\"a\": 1, \"a\": 2}", JSON_PARSE_REJECT_DUPLICATE_KEYS);
 }
 
+TEST(value_equal) {
+    struct json_value *val1, *val2;
+    struct json_value *tmp;
+
+#define JSONT_VALUE_EQUAL(val1_, val2_, res_)         \
+    do {                                              \
+        if (json_value_equal(val1_, val2_) != res_) { \
+            if (res_) {                               \
+                TEST_ABORT("value are not equal");    \
+            } else {                                  \
+                TEST_ABORT("value are equal");        \
+            }                                         \
+        }                                             \
+                                                      \
+        json_value_delete(val1_);                     \
+        json_value_delete(val2_);                     \
+    } while (0)
+
+    /* Null */
+    val1 = json_null_new();
+    val2 = json_null_new();
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    /* Booleans */
+    val1 = json_boolean_new(true);
+    val2 = json_boolean_new(true);
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_boolean_new(false);
+    val2 = json_boolean_new(false);
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_boolean_new(true);
+    val2 = json_boolean_new(false);
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    /* Integers */
+    val1 = json_integer_new(0);
+    val2 = json_integer_new(0);
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_integer_new(-1);
+    val2 = json_integer_new(1);
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    /* Reals */
+    val1 = json_real_new(1.42);
+    val2 = json_real_new(1.42);
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_real_new(-31.3423e2);
+    val2 = json_real_new(-31.3424e2);
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    /* Strings */
+    val1 = json_string_new("");
+    val2 = json_string_new("");
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_string_new("foo bar");
+    val2 = json_string_new("foo bar");
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_string_new("foo");
+    val2 = json_string_new("foo bar");
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    /* Arrays */
+    val1 = json_array_new();
+    val2 = json_array_new();
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_array_new();
+    json_array_add_element(val1, json_integer_new(42));
+    json_array_add_element(val1, json_array_new());
+    val2 = json_array_new();
+    json_array_add_element(val2, json_integer_new(42));
+    json_array_add_element(val2, json_array_new());
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_array_new();
+    json_array_add_element(val1, json_integer_new(42));
+    json_array_add_element(val1, json_array_new());
+    val2 = json_array_new();
+    json_array_add_element(val2, json_integer_new(42));
+    json_array_add_element(val2, json_null_new());
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    /* Objects */
+    val1 = json_object_new();
+    val2 = json_object_new();
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_object_new();
+    json_object_add_member(val1, "a", json_boolean_new(true));
+    json_object_add_member(val1, "b", json_integer_new(0));
+    val2 = json_object_new();
+    json_object_add_member(val2, "a", json_boolean_new(true));
+    json_object_add_member(val2, "b", json_integer_new(0));
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_object_new();
+    json_object_add_member(val1, "a", json_boolean_new(true));
+    json_object_add_member(val1, "b", json_integer_new(0));
+    val2 = json_object_new();
+    json_object_add_member(val2, "b", json_integer_new(0));
+    json_object_add_member(val2, "a", json_boolean_new(true));
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_object_new();
+    json_object_add_member(val1, "a", json_boolean_new(true));
+    json_object_add_member(val1, "b", json_integer_new(0));
+    val2 = json_object_new();
+    json_object_add_member(val2, "a", json_integer_new(0));
+    json_object_add_member(val2, "b", json_null_new());
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    val1 = json_object_new();
+    json_object_add_member(val1, "a", json_boolean_new(true));
+    json_object_add_member(val1, "b", json_integer_new(0));
+    val2 = json_object_new();
+    json_object_add_member(val2, "a", json_boolean_new(true));
+    json_object_add_member(val2, "c", json_integer_new(0));
+    JSONT_VALUE_EQUAL(val1, val2, false);
+
+    val1 = json_object_new();
+    json_object_add_member(val1, "a", json_boolean_new(true));
+    json_object_add_member(val1, "a", json_integer_new(0));
+    val2 = json_object_new();
+    json_object_add_member(val2, "a", json_integer_new(0));
+    json_object_add_member(val2, "a", json_boolean_new(true));
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+    val1 = json_object_new();
+    tmp = json_object_new();
+    json_object_add_member(tmp, "b", json_integer_new(2));
+    json_object_add_member(tmp, "b", json_integer_new(1));
+    json_object_add_member(val1, "a", tmp);
+    tmp = json_object_new();
+    json_object_add_member(tmp, "b", json_integer_new(1));
+    json_object_add_member(tmp, "b", json_integer_new(2));
+    json_object_add_member(val1, "a", tmp);
+    val2 = json_object_new();
+    tmp = json_object_new();
+    json_object_add_member(tmp, "b", json_integer_new(1));
+    json_object_add_member(tmp, "b", json_integer_new(2));
+    json_object_add_member(val2, "a", tmp);
+    tmp = json_object_new();
+    json_object_add_member(tmp, "b", json_integer_new(2));
+    json_object_add_member(tmp, "b", json_integer_new(1));
+    json_object_add_member(val2, "a", tmp);
+    JSONT_VALUE_EQUAL(val1, val2, true);
+
+#undef JSONT_VALUE_EQUAL
+}
+
 int
 main(int argc, char **argv) {
     struct test_suite *suite;
@@ -396,6 +552,8 @@ main(int argc, char **argv) {
     TEST_RUN(suite, invalid_strings);
     TEST_RUN(suite, invalid_literals);
     TEST_RUN(suite, invalid_objects);
+
+    TEST_RUN(suite, value_equal);
 
     test_suite_print_results_and_exit(suite);
 }
