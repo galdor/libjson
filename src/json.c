@@ -21,6 +21,9 @@
 #include "json.h"
 #include "internal.h"
 
+static int json_object_member_cmp_by_index(const void *, const void *);
+static int json_object_member_cmp_by_key(const void *, const void *);
+
 struct json_value *
 json_value_new(enum json_type type) {
     struct json_value *value;
@@ -234,7 +237,7 @@ json_object_add_member2(struct json_value *object_value, const char *key,
     } else {
         nb_members = object->nb_members + 1;
         members = c_realloc(object->members,
-                               nb_members * sizeof(struct json_object_member));
+                            nb_members * sizeof(struct json_object_member));
     }
 
     if (!members) {
@@ -248,6 +251,7 @@ json_object_add_member2(struct json_value *object_value, const char *key,
     member = &object->members[object->nb_members - 1];
     member->key = key_json;
     member->value = value;
+    member->index = nb_members - 1;
 
     return 0;
 }
@@ -267,6 +271,7 @@ json_object_remove_member2(struct json_value *object_value,
 
     for (size_t i = 0; i < object->nb_members; i++) {
         struct json_object_member *member;
+        size_t removed_index;
 
         member = object->members + i;
 
@@ -274,6 +279,8 @@ json_object_remove_member2(struct json_value *object_value,
             continue;
 
         if (memcmp(member->key->u.string.ptr, key, sz) == 0) {
+            removed_index = member->index;
+
             json_value_delete(member->key);
             json_value_delete(member->value);
 
@@ -289,6 +296,19 @@ json_object_remove_member2(struct json_value *object_value,
             }
 
             object->nb_members--;
+            object->sort_mode = JSON_OBJECT_UNSORTED;
+
+            /* Renumber to avoid holes in the index sequence */
+            if (i == object->nb_members) {
+                for (size_t j = 0; j < object->nb_members; j++) {
+                    struct json_object_member *member2;
+
+                    member2 = object->members + j;
+
+                    if (member2->index > removed_index)
+                        member2->index--;
+                }
+            }
         }
     }
 }
@@ -378,6 +398,28 @@ json_object_iterator_get_next(struct json_object_iterator *it,
 
     it->index++;
     return 1;
+}
+
+void
+json_object_sort_by_index(struct json_object *object) {
+    if (object->sort_mode == JSON_OBJECT_SORTED_BY_INDEX)
+        return;
+
+    qsort(object->members, object->nb_members,
+          sizeof(struct json_object_member), json_object_member_cmp_by_index);
+
+    object->sort_mode = JSON_OBJECT_SORTED_BY_INDEX;
+}
+
+void
+json_object_sort_by_key(struct json_object *object) {
+    if (object->sort_mode == JSON_OBJECT_SORTED_BY_KEY)
+        return;
+
+    qsort(object->members, object->nb_members,
+          sizeof(struct json_object_member), json_object_member_cmp_by_key);
+
+    object->sort_mode = JSON_OBJECT_SORTED_BY_KEY;
 }
 
 struct json_value *
@@ -538,4 +580,30 @@ json_boolean_value(const struct json_value *value) {
 struct json_value *
 json_null_new() {
     return json_value_new(JSON_NULL);
+}
+
+static int
+json_object_member_cmp_by_index(const void *arg1, const void *arg2) {
+    const struct json_object_member *member1, *member2;
+
+    member1 = arg1;
+    member2 = arg2;
+
+    if (member1->index < member2->index) {
+        return -1;
+    } else if (member1->index > member2->index) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static int
+json_object_member_cmp_by_key(const void *arg1, const void *arg2) {
+    const struct json_object_member *member1, *member2;
+
+    member1 = arg1;
+    member2 = arg2;
+
+    return strcmp(member1->key->u.string.ptr, member2->key->u.string.ptr);
 }

@@ -25,12 +25,23 @@ void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
 struct json_object_member {
     struct json_value *key;
     struct json_value *value;
+    size_t index;
+};
+
+enum json_object_sort_mode {
+    JSON_OBJECT_UNSORTED = 0,
+    JSON_OBJECT_SORTED_BY_INDEX,
+    JSON_OBJECT_SORTED_BY_KEY,
 };
 
 struct json_object {
     struct json_object_member *members;
     size_t nb_members;
+    enum json_object_sort_mode sort_mode;
 };
+
+void json_object_sort_by_index(struct json_object *);
+void json_object_sort_by_key(struct json_object *);
 
 struct json_object_iterator {
     struct json_object *object;
