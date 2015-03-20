@@ -26,23 +26,28 @@
 
 static void json_die(const char *, ...)
     __attribute__ ((format(printf, 1, 2), noreturn));
-static void json_validate_file(const char *);
+static void *json_read_file(const char *, size_t *);
+static void json_validate_file(const char *, const char *);
 
 int
 main(int argc, char **argv) {
     struct c_command_line *cmdline;
-    const char *filename;
+    const char *filename, *schema_path;
 
     cmdline = c_command_line_new();
 
+    c_command_line_add_option(cmdline, "s", "schema",
+                              "the schema to validate against", "file",
+                              NULL);
     c_command_line_add_argument(cmdline, "the file to validate", "file");
 
     if (c_command_line_parse(cmdline, argc, argv) == -1)
         json_die("%s", c_get_error());
 
+    schema_path = c_command_line_option_value(cmdline, "schema");
     filename = c_command_line_argument_value(cmdline, 0);
 
-    json_validate_file(filename);
+    json_validate_file(filename, schema_path);
 
     c_command_line_delete(cmdline);
     return 0;
@@ -63,11 +68,29 @@ json_die(const char *fmt, ...) {
 }
 
 static void
-json_validate_file(const char *filename) {
+json_validate_file(const char *filename, const char *schema_path) {
+    struct json_schema *schema;
     struct json_value *value;
     char *data;
     size_t len, sz;
     int fd;
+
+    if (schema_path) {
+        char *schema_string;
+        size_t schema_size;
+
+        schema_string = json_read_file(schema_path, &schema_size);
+        if (!schema_string)
+            json_die("cannot load schema: %s", c_get_error());
+
+        schema = json_schema_parse(schema_string, schema_size);
+        if (!schema)
+            json_die("cannot parse schema: %s", c_get_error());
+
+        c_free(schema_string);
+    } else {
+        schema = NULL;
+    }
 
     if (strcmp(filename, "-") == 0) {
         filename = "stdin";
@@ -115,6 +138,48 @@ json_validate_file(const char *filename) {
     if (!value)
         json_die("%s", c_get_error());
 
+    if (schema) {
+        /* TODO json_schema_validate(schema, value); */
+        json_schema_delete(schema);
+    }
+
     json_value_delete(value);
     free(data);
+}
+
+void *
+json_read_file(const char *path, size_t *psize) {
+    struct c_buffer *buf;
+    void *data;
+    int fd;
+
+    buf = c_buffer_new();
+
+    fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        c_set_error("cannot open file: %s", strerror(errno));
+        c_buffer_delete(buf);
+        return NULL;
+    }
+
+    for (;;) {
+        ssize_t ret;
+
+        ret = c_buffer_read(buf, fd, BUFSIZ);
+        if (ret == -1) {
+            c_set_error("cannot read file: %s", c_get_error());
+            c_buffer_delete(buf);
+            close(fd);
+            return NULL;
+        } else if (ret == 0) {
+            break;
+        }
+    }
+
+    close(fd);
+
+    data = c_buffer_extract_string(buf, psize);
+    c_buffer_delete(buf);
+
+    return data;
 }

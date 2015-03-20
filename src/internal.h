@@ -17,6 +17,14 @@
 #ifndef LIBJSON_INTERNAL_H
 #define LIBJSON_INTERNAL_H
 
+#include <alloca.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <string.h>
+
+#include "json.h"
+
 /* Errors */
 void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
@@ -76,8 +84,153 @@ struct json_value *json_value_new(enum json_type);
 void json_value_sort_objects_by_index(struct json_value *);
 
 /* JSON schema */
-struct json_schema {
-    char *title;
+enum json_schema_uri {
+    JSON_SCHEMA_URI_CURRENT,  /* http://json-schema.org/schema# */
+    JSON_SCHEMA_URI_DRAFT_V3, /* http://json-schema.org/draft-04/schema# */
+    JSON_SCHEMA_URI_DRAFT_V4, /* http://json-schema.org/draft-03/schema# */
 };
+
+int json_schema_uri_parse(const char *, enum json_schema_uri *);
+
+enum json_schema_simple_type {
+    JSON_SCHEMA_SIMPLE_ARRAY,
+    JSON_SCHEMA_SIMPLE_BOOLEAN,
+    JSON_SCHEMA_SIMPLE_INTEGER,
+    JSON_SCHEMA_SIMPLE_NULL,
+    JSON_SCHEMA_SIMPLE_NUMBER,
+    JSON_SCHEMA_SIMPLE_OBJECT,
+    JSON_SCHEMA_SIMPLE_STRING,
+};
+
+int json_schema_simple_type_parse(const char *, enum json_schema_simple_type *);
+
+enum json_schema_format {
+    JSON_SCHEMA_FORMAT_DATE_TIME,
+    JSON_SCHEMA_FORMAT_EMAIL,
+    JSON_SCHEMA_FORMAT_HOSTNAME,
+    JSON_SCHEMA_FORMAT_IPV4,
+    JSON_SCHEMA_FORMAT_IPV6,
+    JSON_SCHEMA_FORMAT_URI,
+    JSON_SCHEMA_FORMAT_REGEX,
+};
+
+int json_schema_format_parse(const char *, enum json_schema_format *);
+
+struct json_generic_validator {
+    struct c_vector *types; /* enum json_schema_simple_type */
+
+    struct c_ptr_vector *enumeration; /* struct json_value * */
+
+    struct c_ptr_vector *all_of; /* struct json_schema * */
+    struct c_ptr_vector *any_of; /* struct json_schema * */
+    struct c_ptr_vector *one_of; /* struct json_schema * */
+    struct json_schema *not;
+
+    enum json_schema_format format;
+};
+
+void json_generic_validator_init(struct json_generic_validator *);
+void json_generic_validator_free(struct json_generic_validator *);
+
+struct json_numeric_validator {
+    struct json_value *multiple_of;
+
+    struct json_value *min;
+    bool exclusive_min;
+    struct json_value *max;
+    bool exclusive_max;
+};
+
+void json_numeric_validator_init(struct json_numeric_validator *);
+void json_numeric_validator_free(struct json_numeric_validator *);
+
+struct json_string_validator {
+    size_t min_length;
+    size_t max_length;
+
+    char *pattern;
+};
+
+void json_string_validator_init(struct json_string_validator *);
+void json_string_validator_free(struct json_string_validator *);
+
+struct json_array_validator {
+    size_t min_items;
+    size_t max_items;
+
+    bool unique_items;
+
+    struct c_ptr_vector *items; /* struct json_schema * */
+
+    union {
+        struct json_schema *schema;
+        bool value;
+    } additional_items;
+    bool additional_items_is_schema;
+};
+
+void json_array_validator_init(struct json_array_validator *);
+void json_array_validator_free(struct json_array_validator *);
+
+struct json_object_validator_property {
+    char *string;
+    struct json_schema *schema;
+};
+
+struct json_object_validator_pattern {
+    char *string;
+    struct json_schema *schema;
+};
+
+struct json_object_validator {
+    size_t min_properties;
+    size_t max_properties;
+
+    struct c_ptr_vector *required; /* char * */
+
+    struct c_vector *properties; /* struct json_object_validator_property * */
+
+    union {
+        struct json_schema *schema;
+        bool value;
+    } additional_properties;
+    bool additional_properties_is_schema;
+
+    struct c_vector *pattern_properties; /* struct json_object_validator_pattern */
+
+    struct c_hash_table *schema_dependencies; /* name -> schema */
+    struct c_hash_table *property_dependencies; /* name -> string vector */
+};
+
+void json_object_validator_init(struct json_object_validator *);
+void json_object_validator_free(struct json_object_validator *);
+
+struct json_validator {
+    struct c_hash_table *definitions; /* name -> schema */
+
+    struct json_generic_validator generic;
+    struct json_numeric_validator numeric;
+    struct json_string_validator string;
+    struct json_array_validator array;
+    struct json_object_validator object;
+};
+
+void json_validator_init(struct json_validator *);
+void json_validator_free(struct json_validator *);
+
+struct json_schema {
+    char *id; /* uri */
+    enum json_schema_uri schema_uri; /* $schema */
+
+    char *title;
+    char *description;
+    struct json_value *default_value;
+
+    struct json_validator validator;
+
+    /* TODO refcount */
+};
+
+struct json_schema *json_schema_new(void);
 
 #endif

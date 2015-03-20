@@ -17,8 +17,8 @@
 #ifndef LIBJSON_JSON_H
 #define LIBJSON_JSON_H
 
-#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <core.h>
@@ -107,6 +107,7 @@ bool json_boolean_value(const struct json_value *);
 struct json_value *json_null_new(void);
 
 /* JSON schema */
+struct json_schema *json_schema_parse(const char *, size_t);
+void json_schema_delete(struct json_schema *);
 
 #endif
-
