@@ -22,6 +22,25 @@ static int json_object_member_cmp_by_index(const void *, const void *);
 static int json_object_member_cmp_by_key(const void *, const void *);
 static int json_object_member_cmp_by_key_value(const void *, const void *);
 
+const char *
+json_type_to_string(enum json_type type) {
+    static const char *strings[] = {
+        [JSON_OBJECT]  = "object",
+        [JSON_ARRAY]   = "array",
+        [JSON_INTEGER] = "integer",
+        [JSON_REAL]    = "real",
+        [JSON_STRING]  = "string",
+        [JSON_BOOLEAN] = "boolean",
+        [JSON_NULL]    = "null",
+    };
+    static size_t nb_strings = sizeof(strings) / sizeof(strings[0]);
+
+    if (type >= nb_strings)
+        return NULL;
+
+    return strings[type];
+}
+
 struct json_value *
 json_value_new(enum json_type type) {
     struct json_value *value;

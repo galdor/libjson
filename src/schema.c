@@ -32,10 +32,24 @@ json_schema_parse_validator_type(const struct json_value *);
 static struct json_value *
 json_schema_parse_validator_multiple_of(const struct json_value *);
 
+static bool
+json_schema_value_is_multiple_of_integer(const struct json_value *, int64_t);
+static bool
+json_schema_value_is_multiple_of_real(const struct json_value *, double);
+
+static bool
+json_schema_value_lt_integer(const struct json_value *, int64_t, bool);
+static bool
+json_schema_value_gt_integer(const struct json_value *, int64_t, bool);
+static bool
+json_schema_value_lt_real(const struct json_value *, double, bool);
+static bool
+json_schema_value_gt_real(const struct json_value *, double, bool);
+
 /* Array */
 static int
-json_schema_parse_validator_additional_items(struct json_array_validator *,
-                                             const struct json_value *);
+json_schema_parse_validator_additional_items(const struct json_value *,
+                                             struct json_schema **);
 static struct c_ptr_vector *
 json_schema_parse_validator_items(const struct json_value *);
 static struct c_ptr_vector *
@@ -43,8 +57,8 @@ json_schema_parse_validator_required(const struct json_value *);
 
 /* Object */
 static int
-json_schema_parse_validator_additional_properties(struct json_object_validator *,
-                                                  const struct json_value *);
+json_schema_parse_validator_additional_properties(const struct json_value *,
+                                                  struct json_schema **);
 static struct c_vector *
 json_schema_parse_validator_properties(const struct json_value *);
 static struct c_vector *
@@ -81,8 +95,7 @@ json_schema_uri_parse(const char *string, enum json_schema_uri *puri) {
         enum json_schema_uri uri;
     } uris[] = {
         {"http://json-schema.org/schema#",          JSON_SCHEMA_URI_CURRENT},
-        {"http://json-schema.org/draft-04/schema#", JSON_SCHEMA_URI_DRAFT_V3},
-        {"http://json-schema.org/draft-03/schema#", JSON_SCHEMA_URI_DRAFT_V4},
+        {"http://json-schema.org/draft-04/schema#", JSON_SCHEMA_URI_DRAFT_V4},
     };
     size_t nb_uris = sizeof(uris) / sizeof(uris[0]);
 
@@ -124,6 +137,29 @@ json_schema_simple_type_parse(const char *string,
     }
 
     return -1;
+}
+
+bool
+json_schema_simple_type_matches_type(enum json_schema_simple_type stype,
+                                     enum json_type type) {
+    switch (stype) {
+    case JSON_SCHEMA_SIMPLE_ARRAY:
+        return type == JSON_ARRAY;
+    case JSON_SCHEMA_SIMPLE_BOOLEAN:
+        return type == JSON_BOOLEAN;
+    case JSON_SCHEMA_SIMPLE_INTEGER:
+        return type == JSON_INTEGER;
+    case JSON_SCHEMA_SIMPLE_NULL:
+        return type == JSON_NULL;
+    case JSON_SCHEMA_SIMPLE_NUMBER:
+        return type == JSON_INTEGER || type == JSON_REAL;
+    case JSON_SCHEMA_SIMPLE_OBJECT:
+        return type == JSON_OBJECT;
+    case JSON_SCHEMA_SIMPLE_STRING:
+        return type == JSON_STRING;
+    }
+
+    return false;
 }
 
 /* ------------------------------------------------------------------------
@@ -227,6 +263,8 @@ json_schema_parse_validator_type(const struct json_value *value) {
             c_vector_delete(vector);
             return NULL;
         }
+
+        c_vector_append(vector, &type);
     } else if (value->type == JSON_ARRAY) {
         if (value->u.array.nb_elements == 0) {
             c_set_error("array is empty");
@@ -307,6 +345,138 @@ json_schema_parse_validator_multiple_of(const struct json_value *value) {
     return json_value_clone(value);
 }
 
+static bool
+json_schema_value_is_multiple_of_integer(const struct json_value *value,
+                                         int64_t integer) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+    if (value->type == JSON_INTEGER) {
+        return ((value->u.integer % integer) == 0);
+    } else if (value->type == JSON_REAL) {
+        if (value->u.real > (double)INT64_MAX
+         || value->u.real < (double)INT64_MIN
+         || trunc(value->u.real) != value->u.real) {
+            return false;
+        }
+
+        return (((int64_t)value->u.real % integer) == 0);
+    }
+
+    return false;
+}
+
+static bool
+json_schema_value_is_multiple_of_real(const struct json_value *value,
+                                      double real) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+
+    if (value->type == JSON_INTEGER) {
+        double ratio;
+
+        /* FIXME */
+        ratio = (double)value->u.integer / real;
+        return (trunc(ratio) == ratio);
+    } else if (value->type == JSON_REAL) {
+        double ratio;
+
+        ratio = value->u.real / real;
+        return (trunc(ratio) == ratio);
+    }
+
+    return false;
+}
+
+static bool
+json_schema_value_lt_integer(const struct json_value *value, int64_t integer,
+                             bool exclusive) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+    if (value->type == JSON_INTEGER) {
+        if (exclusive) {
+            return value->u.integer < integer;
+        } else {
+            return value->u.integer <= integer;
+        }
+    } else if (value->type == JSON_REAL) {
+        /* FIXME */
+        if (exclusive) {
+            return (int64_t)value->u.real < integer;
+        } else {
+            return (int64_t)value->u.real <= integer;
+        }
+    }
+
+    return false;
+}
+
+static bool
+json_schema_value_gt_integer(const struct json_value *value, int64_t integer,
+                             bool exclusive) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+    if (value->type == JSON_INTEGER) {
+        if (exclusive) {
+            return value->u.integer > integer;
+        } else {
+            return value->u.integer >= integer;
+        }
+    } else if (value->type == JSON_REAL) {
+        if (exclusive) {
+            /* FIXME */
+            return (int64_t)value->u.real > integer;
+        } else {
+            return (int64_t)value->u.real >= integer;
+        }
+    }
+
+    return false;
+}
+
+static bool
+json_schema_value_lt_real(const struct json_value *value, double real,
+                          bool exclusive) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+    if (value->type == JSON_INTEGER) {
+        if (exclusive) {
+            return (double)value->u.integer < real;
+        } else {
+            return (double)value->u.integer <= real;
+        }
+    } else if (value->type == JSON_REAL) {
+        if (exclusive) {
+            return value->u.real < real;
+        } else {
+            return value->u.real <= real;
+        }
+    }
+
+    return false;
+}
+
+static bool
+json_schema_value_gt_real(const struct json_value *value, double real,
+                          bool exclusive) {
+    assert(value->type == JSON_INTEGER || value->type == JSON_REAL);
+
+    if (value->type == JSON_INTEGER) {
+        if (exclusive) {
+            return (double)value->u.integer > real;
+        } else {
+            return (double)value->u.integer >= real;
+        }
+    } else if (value->type == JSON_REAL) {
+        if (exclusive) {
+            return value->u.real > real;
+        } else {
+            return value->u.real >= real;
+        }
+    }
+
+    return false;
+}
+
 /* ------------------------------------------------------------------------
  *  String validator
  * ------------------------------------------------------------------------ */
@@ -339,36 +509,28 @@ json_array_validator_free(struct json_array_validator *validator) {
         return;
 
     json_schema_vector_delete(validator->items);
-
-    if (validator->additional_items_is_schema)
-        json_schema_delete(validator->additional_items.schema);
+    json_schema_delete(validator->additional_items);
 
     memset(validator, 0, sizeof(struct json_array_validator));
 }
 
 static int
-json_schema_parse_validator_additional_items(struct json_array_validator *validator,
-                                             const struct json_value *value) {
-    struct json_schema *schema;
-
+json_schema_parse_validator_additional_items(const struct json_value *value,
+                                             struct json_schema **pschema) {
     switch (value->type) {
     case JSON_BOOLEAN:
-        validator->additional_items.value = value->u.boolean;
-        validator->additional_items_is_schema = false;
+        *pschema = value->u.boolean ? json_schema_new() : NULL;
         break;
 
     case JSON_OBJECT:
-        schema = json_schema_parse_object(value);
-        if (!schema)
+        *pschema = json_schema_parse_object(value);
+        if (!*pschema)
             return -1;
-
-        validator->additional_items.schema = schema;
-        validator->additional_items_is_schema = true;
         break;
 
     default:
         c_set_error("value is not a boolean or object");
-        break;
+        return -1;
     }
 
     return 0;
@@ -454,7 +616,7 @@ json_object_validator_free(struct json_object_validator *validator) {
     json_string_vector_delete(validator->required);
 
     json_object_validator_property_vector_delete(validator->properties);
-    json_schema_delete(validator->additional_properties.schema);
+    json_schema_delete(validator->additional_properties);
     json_object_validator_pattern_vector_delete(validator->pattern_properties);
 
     json_schema_table_delete(validator->schema_dependencies);
@@ -464,28 +626,22 @@ json_object_validator_free(struct json_object_validator *validator) {
 }
 
 static int
-json_schema_parse_validator_additional_properties(struct json_object_validator *validator,
-                                                  const struct json_value *value) {
-    struct json_schema *schema;
-
+json_schema_parse_validator_additional_properties(const struct json_value *value,
+                                                  struct json_schema **pschema) {
     switch (value->type) {
     case JSON_BOOLEAN:
-        validator->additional_properties.value = value->u.boolean;
-        validator->additional_properties_is_schema = false;
+        *pschema = value->u.boolean ? json_schema_new() : NULL;
         break;
 
     case JSON_OBJECT:
-        schema = json_schema_parse_object(value);
-        if (!schema)
+        *pschema = json_schema_parse_object(value);
+        if (!*pschema)
             return -1;
-
-        validator->additional_properties.schema = schema;
-        validator->additional_properties_is_schema = true;
         break;
 
     default:
         c_set_error("value is not a boolean or object");
-        break;
+        return -1;
     }
 
     return 0;
@@ -730,6 +886,490 @@ json_schema_delete(struct json_schema *schema) {
     c_free0(schema, sizeof(struct json_schema));
 }
 
+/* ------------------------------------------------------------------------
+ *  Validation
+ * ------------------------------------------------------------------------ */
+int
+json_schema_validate(struct json_schema *schema, struct json_value *value) {
+    return json_validator_check(&schema->validator, value);
+}
+
+int
+json_validator_check(struct json_validator *validator,
+                     struct json_value *value) {
+    if (json_generic_validator_check(&validator->generic, value) == -1)
+        return -1;
+
+    switch (value->type) {
+    case JSON_INTEGER:
+    case JSON_REAL:
+        return json_numeric_validator_check(&validator->numeric, value);
+
+    case JSON_STRING:
+        return json_string_validator_check(&validator->string, value);
+
+    case JSON_ARRAY:
+        return json_array_validator_check(&validator->array, value);
+
+    case JSON_OBJECT:
+        return json_object_validator_check(&validator->object, value);
+
+    case JSON_BOOLEAN:
+    case JSON_NULL:
+        return 0;
+    }
+
+    return 0;
+}
+
+int
+json_generic_validator_check(struct json_generic_validator *validator,
+                             struct json_value *value) {
+    bool match;
+
+    /* type */
+    if (validator->types) {
+        match = false;
+
+        for (size_t i = 0; i < c_vector_length(validator->types); i++) {
+            enum json_schema_simple_type *stype;
+
+            stype = c_vector_entry(validator->types, i);
+            if (json_schema_simple_type_matches_type(*stype, value->type)) {
+                match = true;
+                break;
+            }
+        }
+
+        if (!match) {
+            c_set_error("value does not match 'type' constraint");
+            return -1;
+        }
+    }
+
+    /* enum */
+    if (validator->enumeration) {
+        match = false;
+
+        for (size_t i = 0; i < c_ptr_vector_length(validator->enumeration); i++) {
+            struct json_value *evalue;
+
+            evalue = c_ptr_vector_entry(validator->enumeration, i);
+            if (json_value_equal(evalue, value)) {
+                match = true;
+                break;
+            }
+        }
+
+        if (!match) {
+            c_set_error("value does not match 'enum' constraint");
+            return -1;
+        }
+    }
+
+    /* allOf */
+    if (validator->all_of) {
+        match = true;
+
+        for (size_t i = 0; i < c_ptr_vector_length(validator->all_of); i++) {
+            struct json_schema *sschema;
+
+            sschema = c_ptr_vector_entry(validator->all_of, i);
+            if (json_schema_validate(sschema, value) == -1) {
+                match = false;
+                break;
+            }
+        }
+
+        if (!match) {
+            c_set_error("value does not match 'allOf' constraint");
+            return -1;
+        }
+    }
+
+    /* anyOf */
+    if (validator->any_of) {
+        match = false;
+
+        for (size_t i = 0; i < c_ptr_vector_length(validator->any_of); i++) {
+            struct json_schema *sschema;
+
+            sschema = c_ptr_vector_entry(validator->any_of, i);
+            if (json_schema_validate(sschema, value) == 0) {
+                match = true;
+                break;
+            }
+        }
+
+        if (!match) {
+            c_set_error("value does not match 'anyOf' constraint");
+            return -1;
+        }
+    }
+
+    /* oneOf */
+    if (validator->one_of) {
+        size_t nb_matches;
+
+        nb_matches = 0;
+
+        for (size_t i = 0; i < c_ptr_vector_length(validator->one_of); i++) {
+            struct json_schema *sschema;
+            bool is_valid;
+
+            sschema = c_ptr_vector_entry(validator->one_of, i);
+            is_valid = (json_schema_validate(sschema, value) == 0);
+
+            if (is_valid)
+                nb_matches++;
+        }
+
+        if (nb_matches != 1) {
+            c_set_error("value does not match 'oneOf' constraint");
+            return -1;
+        }
+    }
+
+    /* not */
+    if (validator->not) {
+        if (json_schema_validate(validator->not, value) == 0) {
+            c_set_error("value does not match 'not' constraint");
+            return -1;
+        }
+    }
+
+    /* TODO format */
+
+    return 0;
+}
+
+int
+json_numeric_validator_check(struct json_numeric_validator *validator,
+                             struct json_value *value) {
+    /* multipleOf */
+    if (validator->multiple_of) {
+        struct json_value *vvalue;
+        bool is_valid;
+
+        vvalue = validator->multiple_of;
+
+        if (vvalue->type == JSON_INTEGER) {
+            is_valid = json_schema_value_is_multiple_of_integer(value,
+                                                                vvalue->u.integer);
+        } else {
+            is_valid = json_schema_value_is_multiple_of_real(value,
+                                                             vvalue->u.real);
+        }
+
+        if (!is_valid) {
+            c_set_error("value does not match 'multipleOf' constraint");
+            return -1;
+        }
+    }
+
+    /* minimum/exclusiveMinimum */
+    if (validator->min) {
+        struct json_value *vvalue;
+        bool is_valid;
+
+        vvalue = validator->min;
+
+        if (vvalue->type == JSON_INTEGER) {
+            is_valid = json_schema_value_gt_integer(value, vvalue->u.integer,
+                                                    validator->exclusive_min);
+        } else {
+            is_valid = json_schema_value_gt_real(value, vvalue->u.real,
+                                                 validator->exclusive_min);
+        }
+
+        if (!is_valid) {
+            c_set_error("number too small");
+            return -1;
+        }
+    }
+
+    /* maximum/exclusiveMaximum */
+    if (validator->max) {
+        struct json_value *vvalue;
+        bool is_valid;
+
+        vvalue = validator->max;
+
+        if (vvalue->type == JSON_INTEGER) {
+            is_valid = json_schema_value_lt_integer(value, vvalue->u.integer,
+                                                    validator->exclusive_max);
+        } else {
+            is_valid = json_schema_value_lt_real(value, vvalue->u.real,
+                                                 validator->exclusive_max);
+        }
+
+        if (!is_valid) {
+            c_set_error("number too large");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int
+json_string_validator_check(struct json_string_validator *validator,
+                            struct json_value *value) {
+    if (validator->has_min_length || validator->has_max_length) {
+        size_t length;
+
+        /* FIXME c_utf8_nb_codepoints() stops at the first U+0000 character.
+         * Add a function that counts using a pointer and size. */
+        if (c_utf8_nb_codepoints(value->u.string.ptr, &length) == -1) {
+            c_set_error("invalid string: %s", c_get_error());
+            return -1;
+        }
+
+        /* minLength */
+        if (validator->has_min_length) {
+            if (length < validator->min_length) {
+                c_set_error("string too short");
+                return -1;
+            }
+        }
+
+        /* maxLength */
+        if (validator->has_max_length) {
+            if (length > validator->max_length) {
+                c_set_error("string too long");
+                return -1;
+            }
+        }
+    }
+
+    /* TODO pattern */
+    if (validator->pattern) {
+    }
+
+    return 0;
+}
+
+int
+json_array_validator_check(struct json_array_validator *validator,
+                           struct json_value *value) {
+    size_t nb_elements;
+
+    nb_elements = value->u.array.nb_elements;
+
+    /* minItems */
+    if (validator->has_min_items) {
+        if (nb_elements < validator->min_items) {
+            c_set_error("array contains too few elements");
+            return -1;
+        }
+    }
+
+    /* maxItems */
+    if (validator->has_max_items) {
+        if (nb_elements > validator->max_items) {
+            c_set_error("array contains too many elements");
+            return -1;
+        }
+    }
+
+    /* uniqueItems */
+    if (validator->unique_items) {
+        /* XXX inefficient */
+        for (size_t i = 0; i < nb_elements; i++) {
+            struct json_value *el1;
+
+            el1 = value->u.array.elements[i];
+
+            for (size_t j = 0; j < nb_elements; j++) {
+                struct json_value *el2;
+
+                if (i == j)
+                    continue;
+
+                el2 = value->u.array.elements[j];
+
+                if (json_value_equal(el1, el2)) {
+                    c_set_error("array elements are not unique");
+                    return -1;
+                }
+            }
+        }
+    }
+
+    /* items/additionalItems */
+    if (validator->items) {
+        size_t nb_schemas;
+
+        nb_schemas = c_ptr_vector_length(validator->items);
+
+        if (validator->items_is_array) {
+            for (size_t i = 0; i < value->u.array.nb_elements; i++) {
+                struct json_value *evalue;
+                struct json_schema *eschema;
+
+                evalue = value->u.array.elements[i];
+
+                if (i < nb_schemas) {
+                    eschema = c_ptr_vector_entry(validator->items, i);
+                } else {
+                    if (!validator->additional_items) {
+                        c_set_error("array contains additional items");
+                        return -1;
+                    }
+
+                    eschema = validator->additional_items;
+                }
+
+                if (json_schema_validate(eschema, evalue) == -1) {
+                    c_set_error("array element %zu does not match "
+                                "'%s' constraint: %s", i,
+                                (i < nb_schemas) ? "items" : "additionalItems",
+                                c_get_error());
+                    return -1;
+                }
+            }
+        } else {
+            struct json_schema *eschema;
+
+            assert(nb_schemas == 1);
+            eschema = c_ptr_vector_entry(validator->items, 0);
+
+            for (size_t i = 0; i < value->u.array.nb_elements; i++) {
+                struct json_value *evalue;
+
+                evalue = value->u.array.elements[i];
+
+                if (json_schema_validate(eschema, evalue) == -1) {
+                    c_set_error("array element %zu does not match 'items' "
+                                "constraint", i);
+                    return -1;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+int
+json_object_validator_check(struct json_object_validator *validator,
+                            struct json_value *value) {
+    size_t nb_members;
+
+    nb_members = value->u.object.nb_members;
+
+    /* minProperties */
+    if (validator->has_min_properties) {
+        if (nb_members < validator->min_properties) {
+            c_set_error("object contains too few members");
+            return -1;
+        }
+    }
+
+    /* maxProperties */
+    if (validator->has_max_properties) {
+        if (nb_members > validator->max_properties) {
+            c_set_error("object contains too many members");
+            return -1;
+        }
+    }
+
+    /* required */
+    if (validator->required) {
+        for (size_t i = 0; i < c_ptr_vector_length(validator->required); i++) {
+            const char *key;
+
+            key = c_ptr_vector_entry(validator->required, i);
+
+            if (!json_object_has_member(value, key)) {
+                c_set_error("object does not contain required members");
+                return -1;
+            }
+        }
+    }
+
+    /* properties/additionalProperties/patternProperties */
+    for (size_t i = 0; i < value->u.object.nb_members; i++) {
+        const char *key;
+        struct json_value *mvalue;
+        struct json_schema *mschema1, *mschema2;
+
+        key = json_object_nth_member(value, i, &mvalue);
+
+        /* properties */
+        mschema1 = NULL;
+        if (validator->properties) {
+            for (size_t j = 0; j < c_vector_length(validator->properties);
+                 j++) {
+                struct json_object_validator_property *vprop;
+
+                vprop = c_vector_entry(validator->properties, j);
+                if (strcmp(key, vprop->string) == 0) {
+                    mschema1 = vprop->schema;
+                    break;
+                }
+            }
+        }
+
+        if (mschema1) {
+            if (json_schema_validate(mschema1, mvalue) == -1) {
+                c_set_error("object member %zu does not match "
+                            "'properties' constraint: %s", i, c_get_error());
+                return -1;
+            }
+        }
+
+        /* patternProperties */
+        mschema2 = NULL;
+        if (validator->pattern_properties) {
+            for (size_t j = 0; j < c_vector_length(validator->pattern_properties);
+                 j++) {
+                struct json_object_validator_pattern *vpattern;
+
+                vpattern = c_vector_entry(validator->pattern_properties, j);
+                /* TODO */
+#if 0
+                if (REGEX_MATCH) {
+                    mschema2 = vpattern->schema;
+                    break;
+                }
+#endif
+            }
+        }
+
+        if (mschema2) {
+            if (json_schema_validate(mschema2, mvalue) == -1) {
+                c_set_error("object member %zu does not match "
+                            "'patternProperties' constraint: %s",
+                            i, c_get_error());
+                return -1;
+            }
+        }
+
+        if (mschema1 || mschema2)
+            continue;
+
+        /* additionalProperties */
+        if (validator->additional_properties) {
+            if (json_schema_validate(validator->additional_properties,
+                                     mvalue) == -1) {
+                c_set_error("object member %zu does not match "
+                            "'additionalProperties' constraint: %s",
+                            i, c_get_error());
+                return -1;
+            }
+        } else {
+            c_set_error("object contains additional members");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* ------------------------------------------------------------------------
+ *  Parsing
+ * ------------------------------------------------------------------------ */
 struct json_schema *
 json_schema_parse(const char *data, size_t sz) {
     struct json_schema *schema;
@@ -782,6 +1422,8 @@ json_schema_parse_object(const struct json_value *json) {
     string_validator = &validator->string;
     array_validator = &validator->array;
     object_validator = &validator->object;
+
+    object_validator->additional_properties = json_schema_new();
 
 #define JSON_CHECK_TYPE(key_, value_, type_)                    \
     if ((value_)->type != type_) {                              \
@@ -910,9 +1552,11 @@ json_schema_parse_object(const struct json_value *json) {
         /* String */
         } else if (strcmp(key, "maxLength") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            string_validator->has_max_length = true;
             string_validator->max_length = (size_t)value->u.integer;
         } else if (strcmp(key, "minLength") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            string_validator->has_min_length = true;
             string_validator->min_length = (size_t)value->u.integer;
 
         } else if (strcmp(key, "pattern") == 0) {
@@ -922,10 +1566,14 @@ json_schema_parse_object(const struct json_value *json) {
 
         /* Array */
         } else if (strcmp(key, "additionalItems") == 0) {
-            if (json_schema_parse_validator_additional_items(array_validator,
-                                                             value) == -1) {
+            struct json_schema *schema2;
+
+            if (json_schema_parse_validator_additional_items(value,
+                                                             &schema2) == -1) {
                 goto invalid_member;
             }
+
+            array_validator->additional_items = schema2;
 
         } else if (strcmp(key, "items") == 0) {
             ptr_vector = json_schema_parse_validator_items(value);
@@ -933,12 +1581,15 @@ json_schema_parse_object(const struct json_value *json) {
                 goto invalid_member;
 
             array_validator->items = ptr_vector;
+            array_validator->items_is_array = (value->type == JSON_ARRAY);
 
         } else if (strcmp(key, "maxItems") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            array_validator->has_max_items = true;
             array_validator->max_items = (size_t)value->u.integer;
         } else if (strcmp(key, "minItems") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            array_validator->has_min_items = true;
             array_validator->min_items = (size_t)value->u.integer;
         } else if (strcmp(key, "uniqueItems") == 0) {
             JSON_CHECK_TYPE(key, value, JSON_BOOLEAN);
@@ -947,9 +1598,11 @@ json_schema_parse_object(const struct json_value *json) {
         /* Object */
         } else if (strcmp(key, "maxProperties") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            object_validator->has_max_properties = true;
             object_validator->max_properties = (size_t)value->u.integer;
         } else if (strcmp(key, "minProperties") == 0) {
             JSON_CHECK_STRICTLY_POSITIVE_INTEGER(key, value);
+            object_validator->has_min_properties = true;
             object_validator->min_properties = (size_t)value->u.integer;
 
         } else if (strcmp(key, "required") == 0) {
@@ -960,10 +1613,15 @@ json_schema_parse_object(const struct json_value *json) {
             object_validator->required = ptr_vector;
 
         } else if (strcmp(key, "additionalProperties") == 0) {
-            if (json_schema_parse_validator_additional_properties(object_validator,
-                                                                  value) == -1) {
+            struct json_schema *schema2;
+
+            if (json_schema_parse_validator_additional_properties(value,
+                                                                  &schema2) == -1) {
                 goto invalid_member;
             }
+
+            json_schema_delete(object_validator->additional_properties);
+            object_validator->additional_properties = schema2;
 
         } else if (strcmp(key, "properties") == 0) {
             vector = json_schema_parse_validator_properties(value);

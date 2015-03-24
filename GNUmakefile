@@ -12,6 +12,8 @@ CFLAGS+= -Wno-unused-parameter -Wno-unused-function
 
 LDFLAGS=
 
+LDLIBS= -lm
+
 PANDOC_OPTS= -s --toc --email-obfuscation=none
 
 # Platform specific

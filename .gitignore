@@ -8,3 +8,4 @@ session.vim
 /utils/json-validate
 
 /tests/json
+/tests/schema

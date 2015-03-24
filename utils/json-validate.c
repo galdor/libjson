@@ -139,7 +139,9 @@ json_validate_file(const char *filename, const char *schema_path) {
         json_die("%s", c_get_error());
 
     if (schema) {
-        /* TODO json_schema_validate(schema, value); */
+        if (json_schema_validate(schema, value) == -1)
+            json_die("%s", c_get_error());
+
         json_schema_delete(schema);
     }
 

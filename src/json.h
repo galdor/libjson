@@ -34,13 +34,15 @@ enum json_type {
     JSON_NULL,
 };
 
+const char *json_type_to_string(enum json_type);
+
 struct json_value;
 
 enum json_parse_option {
     JSON_PARSE_DEFAULT                = 0,
 
-    JSON_PARSE_REJECT_DUPLICATE_KEYS  = (1 << 0),
-    JSON_PARSE_REJECT_NULL_CHARACTERS = (1 << 1),
+    JSON_PARSE_REJECT_DUPLICATE_KEYS  = (1 << 1),
+    JSON_PARSE_REJECT_NULL_CHARACTERS = (1 << 2),
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
@@ -109,5 +111,7 @@ struct json_value *json_null_new(void);
 /* JSON schema */
 struct json_schema *json_schema_parse(const char *, size_t);
 void json_schema_delete(struct json_schema *);
+
+int json_schema_validate(struct json_schema *, struct json_value *);
 
 #endif
