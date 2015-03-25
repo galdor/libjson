@@ -113,6 +113,8 @@ struct json_value *json_null_new(void);
 
 /* JSON schema */
 struct json_schema *json_schema_parse(const char *, size_t);
+struct json_schema *json_schema_parse_fd(int);
+struct json_schema *json_schema_parse_file(const char *);
 void json_schema_delete(struct json_schema *);
 
 int json_schema_validate(struct json_schema *, struct json_value *);

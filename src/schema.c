@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "internal.h"
 
 /* Schema */
@@ -1473,6 +1476,56 @@ json_schema_parse(const char *data, size_t sz) {
     }
 
     json_value_delete(json);
+    return schema;
+}
+
+struct json_schema *
+json_schema_parse_fd(int fd) {
+    struct json_schema *schema;
+    struct c_buffer *buf;
+
+    buf = c_buffer_new();
+
+    for (;;) {
+        ssize_t ret;
+
+        ret = c_buffer_read(buf, fd, BUFSIZ);
+        if (ret == -1) {
+            c_set_error("cannot read file: %s", c_get_error());
+            c_buffer_delete(buf);
+        } else if (ret == 0) {
+            break;
+        }
+    }
+
+    schema = json_schema_parse(c_buffer_data(buf), c_buffer_length(buf));
+    if (!schema) {
+        c_buffer_delete(buf);
+        return NULL;
+    }
+
+    c_buffer_delete(buf);
+    return schema;
+}
+
+struct json_schema *
+json_schema_parse_file(const char *path) {
+    struct json_schema *schema;
+    int fd;
+
+    fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        c_set_error("cannot open %s: %s", path, strerror(errno));
+        return NULL;
+    }
+
+    schema = json_schema_parse_fd(fd);
+    if (!schema) {
+        close(fd);
+        return NULL;
+    }
+
+    close(fd);
     return schema;
 }
 
