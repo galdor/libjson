@@ -193,7 +193,12 @@ struct json_array_validator {
 
     bool unique_items;
 
-    struct json_schema *additional_items;
+    union {
+        struct json_schema *schema;
+        bool boolean;
+    } additional_items;
+    bool additional_items_is_schema;
+
     struct c_ptr_vector *items; /* struct json_schema * */
     bool items_is_array;
 };
@@ -227,7 +232,13 @@ struct json_object_validator {
     struct c_ptr_vector *required; /* char * */
 
     struct c_vector *properties; /* struct json_object_validator_property * */
-    struct json_schema *additional_properties;
+
+    union {
+        struct json_schema *schema;
+        bool boolean;
+    } additional_properties;
+    bool additional_properties_is_schema;
+
     struct c_vector *pattern_properties; /* struct json_object_validator_pattern */
 
     struct c_hash_table *schema_dependencies; /* name -> schema */

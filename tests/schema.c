@@ -92,8 +92,8 @@ TEST(array) {
     JSONT_SCHEMA_VALID("{\"items\": [{\"type\": \"integer\"},"
                        "             {\"type\": \"string\"}]}",
                        "[1,\"2\"]");
-    JSONT_SCHEMA_INVALID("{\"items\": [{\"type\": \"integer\"}]}",
-                         "[1,2,3]");
+    JSONT_SCHEMA_VALID("{\"items\": [{\"type\": \"integer\"}]}",
+                       "[1,2,3]");
     JSONT_SCHEMA_INVALID("{\"items\": [{\"type\": \"integer\"},"
                          "             {\"type\": \"string\"}]}",
                          "[1,2]");

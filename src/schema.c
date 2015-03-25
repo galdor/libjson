@@ -51,8 +51,8 @@ json_schema_value_gt_real(const struct json_value *, double, bool);
 
 /* Array */
 static int
-json_schema_parse_validator_additional_items(const struct json_value *,
-                                             struct json_schema **);
+json_schema_parse_validator_additional_items(struct json_array_validator *,
+                                             const struct json_value *);
 static struct c_ptr_vector *
 json_schema_parse_validator_items(const struct json_value *);
 static struct c_ptr_vector *
@@ -60,8 +60,8 @@ json_schema_parse_validator_required(const struct json_value *);
 
 /* Object */
 static int
-json_schema_parse_validator_additional_properties(const struct json_value *,
-                                                  struct json_schema **);
+json_schema_parse_validator_additional_properties(struct json_object_validator *,
+                                                  const struct json_value *);
 static struct c_vector *
 json_schema_parse_validator_properties(const struct json_value *);
 static struct c_vector *
@@ -509,6 +509,9 @@ json_string_validator_free(struct json_string_validator *validator) {
 void
 json_array_validator_init(struct json_array_validator *validator) {
     memset(validator, 0, sizeof(struct json_array_validator));
+
+    validator->additional_items_is_schema = false;
+    validator->additional_items.boolean = true;
 }
 
 void
@@ -517,22 +520,26 @@ json_array_validator_free(struct json_array_validator *validator) {
         return;
 
     json_schema_vector_delete(validator->items);
-    json_schema_delete(validator->additional_items);
+
+    if (validator->additional_items_is_schema)
+        json_schema_delete(validator->additional_items.schema);
 
     memset(validator, 0, sizeof(struct json_array_validator));
 }
 
 static int
-json_schema_parse_validator_additional_items(const struct json_value *value,
-                                             struct json_schema **pschema) {
+json_schema_parse_validator_additional_items(struct json_array_validator *validator,
+                                             const struct json_value *value) {
     switch (value->type) {
     case JSON_BOOLEAN:
-        *pschema = value->u.boolean ? json_schema_new() : NULL;
+        validator->additional_items_is_schema = false;
+        validator->additional_items.boolean = value->u.boolean;
         break;
 
     case JSON_OBJECT:
-        *pschema = json_schema_parse_object(value);
-        if (!*pschema)
+        validator->additional_items_is_schema = true;
+        validator->additional_items.schema = json_schema_parse_object(value);
+        if (!validator->additional_items.schema)
             return -1;
         break;
 
@@ -614,6 +621,9 @@ json_schema_parse_validator_required(const struct json_value *value) {
 void
 json_object_validator_init(struct json_object_validator *validator) {
     memset(validator, 0, sizeof(struct json_object_validator));
+
+    validator->additional_properties_is_schema = false;
+    validator->additional_properties.boolean = true;
 }
 
 void
@@ -624,7 +634,8 @@ json_object_validator_free(struct json_object_validator *validator) {
     json_string_vector_delete(validator->required);
 
     json_object_validator_property_vector_delete(validator->properties);
-    json_schema_delete(validator->additional_properties);
+    if (validator->additional_properties_is_schema)
+        json_schema_delete(validator->additional_properties.schema);
     json_object_validator_pattern_vector_delete(validator->pattern_properties);
 
     json_schema_table_delete(validator->schema_dependencies);
@@ -634,16 +645,18 @@ json_object_validator_free(struct json_object_validator *validator) {
 }
 
 static int
-json_schema_parse_validator_additional_properties(const struct json_value *value,
-                                                  struct json_schema **pschema) {
+json_schema_parse_validator_additional_properties(struct json_object_validator *validator,
+                                                  const struct json_value *value) {
     switch (value->type) {
     case JSON_BOOLEAN:
-        *pschema = value->u.boolean ? json_schema_new() : NULL;
+        validator->additional_properties_is_schema = false;
+        validator->additional_properties.boolean = value->u.boolean;
         break;
 
     case JSON_OBJECT:
-        *pschema = json_schema_parse_object(value);
-        if (!*pschema)
+        validator->additional_properties_is_schema = true;
+        validator->additional_properties.schema = json_schema_parse_object(value);
+        if (!validator->additional_properties.schema)
             return -1;
         break;
 
@@ -1243,20 +1256,26 @@ json_array_validator_check(struct json_array_validator *validator,
                 if (i < nb_schemas) {
                     eschema = c_ptr_vector_entry(validator->items, i);
                 } else {
-                    if (!validator->additional_items) {
-                        c_set_error("array contains additional items");
-                        return -1;
-                    }
+                    if (validator->additional_items_is_schema) {
+                        eschema = validator->additional_items.schema;
+                    } else {
+                        if (!validator->additional_items.boolean) {
+                            c_set_error("array contains additional items");
+                            return -1;
+                        }
 
-                    eschema = validator->additional_items;
+                        eschema = NULL;
+                    }
                 }
 
-                if (json_schema_validate(eschema, evalue) == -1) {
-                    c_set_error("array element %zu does not match "
-                                "'%s' constraint: %s", i,
-                                (i < nb_schemas) ? "items" : "additionalItems",
-                                c_get_error());
-                    return -1;
+                if (eschema) {
+                    if (json_schema_validate(eschema, evalue) == -1) {
+                        c_set_error("array element %zu does not match "
+                                    "'%s' constraint: %s", i,
+                                    (i < nb_schemas) ? "items" : "additionalItems",
+                                    c_get_error());
+                        return -1;
+                    }
                 }
             }
         } else {
@@ -1385,8 +1404,8 @@ json_object_validator_check(struct json_object_validator *validator,
             continue;
 
         /* additionalProperties */
-        if (validator->additional_properties) {
-            if (json_schema_validate(validator->additional_properties,
+        if (validator->additional_properties_is_schema) {
+            if (json_schema_validate(validator->additional_properties.schema,
                                      mvalue) == -1) {
                 c_set_error("object member %zu does not match "
                             "'additionalProperties' constraint: %s",
@@ -1394,8 +1413,10 @@ json_object_validator_check(struct json_object_validator *validator,
                 return -1;
             }
         } else {
-            c_set_error("object contains additional members");
-            return -1;
+            if (!validator->additional_properties.boolean) {
+                c_set_error("object contains additional members");
+                return -1;
+            }
         }
     }
 
@@ -1553,8 +1574,6 @@ json_schema_parse_object(const struct json_value *json) {
     array_validator = &validator->array;
     object_validator = &validator->object;
 
-    object_validator->additional_properties = json_schema_new();
-
 #define JSON_CHECK_TYPE(key_, value_, type_)                    \
     if ((value_)->type != type_) {                              \
         c_set_error("invalid type for member '%s'", key_);      \
@@ -1710,14 +1729,10 @@ json_schema_parse_object(const struct json_value *json) {
 
         /* Array */
         } else if (strcmp(key, "additionalItems") == 0) {
-            struct json_schema *schema2;
-
-            if (json_schema_parse_validator_additional_items(value,
-                                                             &schema2) == -1) {
+            if (json_schema_parse_validator_additional_items(array_validator,
+                                                             value) == -1) {
                 goto invalid_member;
             }
-
-            array_validator->additional_items = schema2;
 
         } else if (strcmp(key, "items") == 0) {
             ptr_vector = json_schema_parse_validator_items(value);
@@ -1757,15 +1772,10 @@ json_schema_parse_object(const struct json_value *json) {
             object_validator->required = ptr_vector;
 
         } else if (strcmp(key, "additionalProperties") == 0) {
-            struct json_schema *schema2;
-
-            if (json_schema_parse_validator_additional_properties(value,
-                                                                  &schema2) == -1) {
+            if (json_schema_parse_validator_additional_properties(object_validator,
+                                                                  value) == -1) {
                 goto invalid_member;
             }
-
-            json_schema_delete(object_validator->additional_properties);
-            object_validator->additional_properties = schema2;
 
         } else if (strcmp(key, "properties") == 0) {
             vector = json_schema_parse_validator_properties(value);
