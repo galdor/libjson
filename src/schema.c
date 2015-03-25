@@ -1049,6 +1049,10 @@ json_generic_validator_check(struct json_generic_validator *validator,
     }
 
     /* TODO format */
+    if (validator->format) {
+        c_set_error("'format' keyword is not supported");
+        return -1;
+    }
 
     return 0;
 }
@@ -1547,7 +1551,10 @@ json_schema_parse_object(const struct json_value *json) {
 
         } else if (strcmp(key, "$ref") == 0) {
             JSON_CHECK_TYPE(key, value, JSON_STRING);
+
             /* TODO */
+            c_set_error("schema references are not supported");
+            goto invalid_member;
 
         } else if (strcmp(key, "title") == 0) {
             JSON_CHECK_TYPE(key, value, JSON_STRING);
