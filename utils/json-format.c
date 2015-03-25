@@ -91,8 +91,6 @@ json_die(const char *fmt, ...) {
 static struct json_value *
 json_load_file(const char *filename) {
     struct json_value *value;
-    char *data;
-    size_t len, sz;
     int fd;
 
     if (strcmp(filename, "-") == 0) {
@@ -104,45 +102,11 @@ json_load_file(const char *filename) {
             json_die("cannot open %s: %s", filename, strerror(errno));
     }
 
-    data = NULL;
-    len = 0;
-    sz = 0;
-
-    for (;;) {
-        ssize_t ret;
-
-        sz += BUFSIZ;
-        if (sz == 0) {
-            data = malloc(sz);
-            if (!data) {
-                json_die("cannot allocate %zu bytes: %s",
-                         sz, strerror(errno));
-            }
-        } else {
-            data = realloc(data, sz);
-            if (!data) {
-                json_die("cannot reallocate %zu bytes: %s",
-                         sz, strerror(errno));
-            }
-        }
-
-        ret = read(fd, data + len, BUFSIZ);
-        if (ret == -1)
-            json_die("cannot read %s: %s", filename, strerror(errno));
-        if (ret == 0)
-            break;
-
-        len += (size_t)ret;
-    }
-
-    close(fd);
-
-    value = json_parse(data, len, JSON_PARSE_DEFAULT);
+    value = json_parse_fd(fd, JSON_PARSE_DEFAULT);
     if (!value)
         json_die("%s", c_get_error());
 
-    free(data);
-
+    close(fd);
     return value;
 }
 

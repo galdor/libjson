@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "internal.h"
 
 struct json_parser {
@@ -67,6 +70,56 @@ json_parse(const char *buf, size_t sz, uint32_t options) {
         return NULL;
     }
 
+    return value;
+}
+
+struct json_value *
+json_parse_fd(int fd, uint32_t options) {
+    struct json_value *value;
+    struct c_buffer *buf;
+
+    buf = c_buffer_new();
+
+    for (;;) {
+        ssize_t ret;
+
+        ret = c_buffer_read(buf, fd, BUFSIZ);
+        if (ret == -1) {
+            c_set_error("cannot read file: %s", c_get_error());
+            c_buffer_delete(buf);
+        } else if (ret == 0) {
+            break;
+        }
+    }
+
+    value = json_parse(c_buffer_data(buf), c_buffer_length(buf), options);
+    if (!value) {
+        c_buffer_delete(buf);
+        return NULL;
+    }
+
+    c_buffer_delete(buf);
+    return value;
+}
+
+struct json_value *
+json_parse_file(const char *path, uint32_t options) {
+    struct json_value *value;
+    int fd;
+
+    fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        c_set_error("cannot open %s: %s", path, strerror(errno));
+        return NULL;
+    }
+
+    value = json_parse_fd(fd, options);
+    if (!value) {
+        close(fd);
+        return NULL;
+    }
+
+    close(fd);
     return value;
 }
 

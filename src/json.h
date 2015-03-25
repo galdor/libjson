@@ -46,6 +46,9 @@ enum json_parse_option {
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
+struct json_value *json_parse_fd(int, uint32_t);
+struct json_value *json_parse_file(const char *, uint32_t);
+
 void json_value_delete(struct json_value *);
 struct json_value *json_value_clone(const struct json_value *);
 bool json_value_equal(struct json_value *, struct json_value *);
