@@ -1279,6 +1279,9 @@ int
 json_object_validator_check(struct json_object_validator *validator,
                             struct json_value *value) {
     size_t nb_members;
+    const char *key;
+
+    assert(value->type == JSON_OBJECT);
 
     nb_members = value->u.object.nb_members;
 
@@ -1301,8 +1304,6 @@ json_object_validator_check(struct json_object_validator *validator,
     /* required */
     if (validator->required) {
         for (size_t i = 0; i < c_ptr_vector_length(validator->required); i++) {
-            const char *key;
-
             key = c_ptr_vector_entry(validator->required, i);
 
             if (!json_object_has_member(value, key)) {
@@ -1314,7 +1315,6 @@ json_object_validator_check(struct json_object_validator *validator,
 
     /* properties/additionalProperties/patternProperties */
     for (size_t i = 0; i < value->u.object.nb_members; i++) {
-        const char *key;
         struct json_value *mvalue;
         struct json_schema *mschema1, *mschema2;
 
@@ -1390,6 +1390,51 @@ json_object_validator_check(struct json_object_validator *validator,
             c_set_error("object contains additional members");
             return -1;
         }
+    }
+
+    /* dependencies */
+    if (validator->schema_dependencies) {
+        struct c_hash_table_iterator *it;
+        struct json_schema *schema;
+
+        it = c_hash_table_iterate(validator->schema_dependencies);
+        while (c_hash_table_iterator_next(it, (void **)&key,
+                                          (void **)&schema) == 1) {
+            if (json_object_has_member(value, key)) {
+                if (json_schema_validate(schema, value) == -1) {
+                    c_set_error("object contains member '%s' but does not match "
+                                "the associated schema dependency", key);
+                    c_hash_table_iterator_delete(it);
+                    return -1;
+                }
+            }
+        }
+        c_hash_table_iterator_delete(it);
+    }
+
+    if (validator->property_dependencies) {
+        struct c_hash_table_iterator *it;
+        struct c_ptr_vector *ptr_vector;
+
+        it = c_hash_table_iterate(validator->property_dependencies);
+        while (c_hash_table_iterator_next(it, (void **)&key,
+                                          (void **)&ptr_vector) == 1) {
+            if (json_object_has_member(value, key)) {
+                for (size_t i = 0; i < c_ptr_vector_length(ptr_vector); i++) {
+                    const char *property;
+
+                    property = c_ptr_vector_entry(ptr_vector, i);
+
+                    if (!json_object_has_member(value, property)) {
+                        c_set_error("object has member '%s' but does not have "
+                                    "member '%s'", key, property);
+                        c_hash_table_iterator_delete(it);
+                        return -1;
+                    }
+                }
+            }
+        }
+        c_hash_table_iterator_delete(it);
     }
 
     return 0;

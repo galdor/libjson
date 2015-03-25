@@ -197,7 +197,24 @@ TEST(object) {
                          " \"additionalProperties\": {\"type\": \"string\"}}",
                          "{\"a\": 1, \"b\": true, \"d\": false}");
 
-    /* TODO dependencies */
+    /* dependencies */
+    JSONT_SCHEMA_VALID("{\"dependencies\": {\"a\": [\"b\", \"c\"]}}",
+                       "{}");
+    JSONT_SCHEMA_VALID("{\"dependencies\": {\"a\": [\"b\", \"c\"]}}",
+                       "{\"a\": 1, \"b\": 2, \"c\": 3}");
+    JSONT_SCHEMA_INVALID("{\"dependencies\": {\"a\": [\"b\", \"c\"]}}",
+                         "{\"a\": 1}");
+    JSONT_SCHEMA_INVALID("{\"dependencies\": {\"a\": [\"b\", \"c\"]}}",
+                         "{\"a\": 1, \"b\": 2}");
+
+    JSONT_SCHEMA_VALID("{\"dependencies\": {\"a\": {\"minProperties\": 3}}}",
+                       "{}");
+    JSONT_SCHEMA_VALID("{\"dependencies\": {\"a\": {\"minProperties\": 3}}}",
+                       "{\"a\": 1, \"b\": 2, \"c\": 3}");
+    JSONT_SCHEMA_INVALID("{\"dependencies\": {\"a\": {\"minProperties\": 3}}}",
+                         "{\"a\": 1}");
+    JSONT_SCHEMA_INVALID("{\"dependencies\": {\"a\": {\"minProperties\": 3}}}",
+                         "{\"a\": 1, \"b\": 2}");
 }
 
 TEST(generic) {
