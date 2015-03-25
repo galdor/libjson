@@ -163,7 +163,39 @@ TEST(object) {
                          " \"additionalProperties\": {\"type\": \"string\"}}",
                          "{\"a\": 1, \"b\": true, \"c\": null}");
 
-    /* TODO patternProperties */
+    /* patternProperties */
+    JSONT_SCHEMA_VALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                         "\"b\": {\"type\": \"boolean\"}},"
+                       " \"patternProperties\": {\"^f\": {\"type\": \"null\"}}}",
+                       "{\"a\": 1, \"b\": true, \"foo\": null}");
+    JSONT_SCHEMA_INVALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                           "\"b\": {\"type\": \"boolean\"}},"
+                         " \"patternProperties\": {\"^f\": {\"type\": \"null\"}}}",
+                         "{\"a\": 1, \"b\": true, \"foo\": 42}");
+
+    JSONT_SCHEMA_VALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                         "\"b\": {\"type\": \"boolean\"}},"
+                       " \"patternProperties\": {\"^a\": {\"minimum\": 10}}}",
+                       "{\"a\": 12, \"b\": true}");
+    JSONT_SCHEMA_INVALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                           "\"b\": {\"type\": \"boolean\"}},"
+                         " \"patternProperties\": {\"^a\": {\"minimum\": 10}}}",
+                         "{\"a\": 8, \"b\": true}");
+    JSONT_SCHEMA_INVALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                           "\"b\": {\"type\": \"boolean\"}},"
+                         " \"patternProperties\": {\"^a\": {\"minimum\": 10}}}",
+                         "{\"a\": 10.5, \"b\": true}");
+
+    JSONT_SCHEMA_VALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                         "\"b\": {\"type\": \"boolean\"}},"
+                       " \"patternProperties\": {\"^f\": {\"type\": \"null\"}},"
+                       " \"additionalProperties\": {\"type\": \"string\"}}",
+                       "{\"a\": 1, \"b\": true, \"d\": \"foobar\"}");
+    JSONT_SCHEMA_INVALID("{\"properties\": {\"a\": {\"type\": \"integer\"},"
+                                           "\"b\": {\"type\": \"boolean\"}},"
+                         " \"patternProperties\": {\"^f\": {\"type\": \"null\"}},"
+                         " \"additionalProperties\": {\"type\": \"string\"}}",
+                         "{\"a\": 1, \"b\": true, \"d\": false}");
 
     /* TODO dependencies */
 }
@@ -273,7 +305,13 @@ TEST(string) {
     JSONT_SCHEMA_INVALID("{\"items\": {\"maxLength\": 3}}",
                          "[\"abcd\"]");
 
-    /* TODO pattern */
+    /* pattern */
+    JSONT_SCHEMA_VALID("{\"items\": {\"pattern\": \"^[0-9]+$\"}}",
+                       "[\"1\", \"42\"]");
+    JSONT_SCHEMA_VALID("{\"items\": {\"pattern\": \"^[0-9]+$\"}}",
+                       "[\"1\", true, \"42\"]");
+    JSONT_SCHEMA_INVALID("{\"items\": {\"pattern\": \"^[0-9]+$\"}}",
+                         "[\"1\", \"42\", \"foo\"]");
 }
 
 #undef JSONT_SCHEMA_VALID

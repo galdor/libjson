@@ -4,7 +4,7 @@ libdir= $(prefix)/lib
 incdir= $(prefix)/include
 bindir= $(prefix)/bin
 
-CC=   clang
+CC= clang
 
 CFLAGS+= -std=c99
 CFLAGS+= -Wall -Wextra -Werror -Wsign-conversion
@@ -12,7 +12,7 @@ CFLAGS+= -Wno-unused-parameter -Wno-unused-function
 
 LDFLAGS=
 
-LDLIBS= -lm
+LDLIBS= -lm -lpcre
 
 PANDOC_OPTS= -s --toc --email-obfuscation=none
 

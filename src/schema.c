@@ -71,6 +71,10 @@ json_schema_parse_validator_dependencies(struct json_object_validator *,
 static struct c_hash_table *
 json_schema_parse_validator_definitions(const struct json_value *);
 
+/* Regex */
+pcre *json_schema_re_compile(const char *);
+int json_schema_re_exec(pcre *, const char *, size_t, bool *);
+
 /* Misc */
 static void json_value_vector_delete(struct c_ptr_vector *);
 static void json_schema_vector_delete(struct c_ptr_vector *);
@@ -491,6 +495,7 @@ json_string_validator_free(struct json_string_validator *validator) {
         return;
 
     c_free(validator->pattern);
+    pcre_free(validator->pattern_re);
 
     memset(validator, 0, sizeof(struct json_string_validator));
 }
@@ -696,14 +701,19 @@ json_schema_parse_validator_pattern_properties(const struct json_value *value) {
 
         key = json_object_nth_member(value, i, &mvalue);
 
-        /* TODO validate regexp */
-
         pattern.schema = json_schema_parse_object(mvalue);
         if (!pattern.schema) {
             json_object_validator_pattern_vector_delete(vector);
             return NULL;
         }
-        pattern.string = c_strdup(key);
+
+        pattern.pattern = c_strdup(key);
+        pattern.pattern_re = json_schema_re_compile(key);
+        if (!pattern.pattern_re) {
+            c_free(pattern.pattern);
+            json_schema_delete(pattern.schema);
+            return NULL;
+        }
 
         c_vector_append(vector, &pattern);
     }
@@ -1115,6 +1125,8 @@ json_numeric_validator_check(struct json_numeric_validator *validator,
 int
 json_string_validator_check(struct json_string_validator *validator,
                             struct json_value *value) {
+    assert(value->type == JSON_STRING);
+
     if (validator->has_min_length || validator->has_max_length) {
         size_t length;
 
@@ -1142,8 +1154,20 @@ json_string_validator_check(struct json_string_validator *validator,
         }
     }
 
-    /* TODO pattern */
+    /* pattern */
     if (validator->pattern) {
+        bool match;
+
+        if (json_schema_re_exec(validator->pattern_re,
+                                value->u.string.ptr, value->u.string.len,
+                                &match) == -1) {
+            return -1;
+        }
+
+        if (!match) {
+            c_set_error("string does not match pattern");
+            return -1;
+        }
     }
 
     return 0;
@@ -1241,7 +1265,7 @@ json_array_validator_check(struct json_array_validator *validator,
 
                 if (json_schema_validate(eschema, evalue) == -1) {
                     c_set_error("array element %zu does not match 'items' "
-                                "constraint", i);
+                                "constraint: %s", i, c_get_error());
                     return -1;
                 }
             }
@@ -1325,15 +1349,19 @@ json_object_validator_check(struct json_object_validator *validator,
             for (size_t j = 0; j < c_vector_length(validator->pattern_properties);
                  j++) {
                 struct json_object_validator_pattern *vpattern;
+                bool match;
 
                 vpattern = c_vector_entry(validator->pattern_properties, j);
-                /* TODO */
-#if 0
-                if (REGEX_MATCH) {
+
+                if (json_schema_re_exec(vpattern->pattern_re,
+                                        key, strlen(key), &match) == -1) {
+                    return -1;
+                }
+
+                if (match) {
                     mschema2 = vpattern->schema;
                     break;
                 }
-#endif
             }
         }
 
@@ -1560,9 +1588,20 @@ json_schema_parse_object(const struct json_value *json) {
             string_validator->min_length = (size_t)value->u.integer;
 
         } else if (strcmp(key, "pattern") == 0) {
+            char *pattern;
+            pcre *re;
+
             JSON_CHECK_TYPE(key, value, JSON_STRING);
-            string_validator->pattern = c_strndup(value->u.string.ptr,
-                                                  value->u.string.len);
+
+            pattern = c_strndup(value->u.string.ptr, value->u.string.len);
+            re = json_schema_re_compile(pattern);
+            if (!re) {
+                c_free(pattern);
+                goto invalid_member;
+            }
+
+            string_validator->pattern = pattern;
+            string_validator->pattern_re = re;
 
         /* Array */
         } else if (strcmp(key, "additionalItems") == 0) {
@@ -1712,6 +1751,53 @@ json_schema_parse_schema_array(const struct json_value *value) {
 }
 
 /* ------------------------------------------------------------------------
+ *  Regex
+ * ------------------------------------------------------------------------ */
+pcre *
+json_schema_re_compile(const char *pattern) {
+    const char *error;
+    int flags, error_offset;
+    pcre *re;
+
+    flags = PCRE_UTF8 | PCRE_JAVASCRIPT_COMPAT;
+
+    re = pcre_compile(pattern, flags, &error, &error_offset, NULL);
+    if (!re) {
+        c_set_error("cannot compile regex: %s", error);
+        return NULL;
+    }
+
+    return re;
+}
+
+int
+json_schema_re_exec(pcre *re, const char *string, size_t length, bool *pmatch) {
+    int ret, offset, flags;
+
+    if (length > INT_MAX) {
+        c_set_error("string too long");
+        return -1;
+    }
+
+    offset = 0;
+    flags = 0;
+
+    ret = pcre_exec(re, NULL, string, (int)length, offset, flags, NULL, 0);
+    if (ret < 0) {
+        if (ret == PCRE_ERROR_NOMATCH) {
+            *pmatch = false;
+            return 0;
+        } else {
+            c_set_error("cannot execute regex: %d", ret);
+            return -1;
+        }
+    }
+
+    *pmatch = true;
+    return 0;
+}
+
+/* ------------------------------------------------------------------------
  *  Misc
  * ------------------------------------------------------------------------ */
 static void
@@ -1814,7 +1900,9 @@ json_object_validator_pattern_vector_delete(struct c_vector *vector) {
 
         pattern = c_vector_entry(vector, i);
 
-        c_free(pattern->string);
+        c_free(pattern->pattern);
+        pcre_free(pattern->pattern_re);
+
         json_schema_delete(pattern->schema);
     }
 

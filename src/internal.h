@@ -22,8 +22,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <string.h>
+
+#include <pcre.h>
 
 #include "json.h"
 
@@ -172,6 +175,7 @@ struct json_string_validator {
     size_t max_length;
 
     char *pattern;
+    pcre *pattern_re;
 };
 
 void json_string_validator_init(struct json_string_validator *);
@@ -203,11 +207,14 @@ int json_array_validator_check(struct json_array_validator *,
 /* Object validator */
 struct json_object_validator_property {
     char *string;
+
     struct json_schema *schema;
 };
 
 struct json_object_validator_pattern {
-    char *string;
+    char *pattern;
+    pcre *pattern_re;
+
     struct json_schema *schema;
 };
 
