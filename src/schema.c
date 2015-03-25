@@ -935,23 +935,23 @@ json_validator_check(struct json_validator *validator,
 int
 json_generic_validator_check(struct json_generic_validator *validator,
                              struct json_value *value) {
-    bool match;
+    bool is_valid;
 
     /* type */
     if (validator->types) {
-        match = false;
+        is_valid = false;
 
         for (size_t i = 0; i < c_vector_length(validator->types); i++) {
             enum json_schema_simple_type *stype;
 
             stype = c_vector_entry(validator->types, i);
             if (json_schema_simple_type_matches_type(*stype, value->type)) {
-                match = true;
+                is_valid = true;
                 break;
             }
         }
 
-        if (!match) {
+        if (!is_valid) {
             c_set_error("value does not match 'type' constraint");
             return -1;
         }
@@ -959,19 +959,19 @@ json_generic_validator_check(struct json_generic_validator *validator,
 
     /* enum */
     if (validator->enumeration) {
-        match = false;
+        is_valid = false;
 
         for (size_t i = 0; i < c_ptr_vector_length(validator->enumeration); i++) {
             struct json_value *evalue;
 
             evalue = c_ptr_vector_entry(validator->enumeration, i);
             if (json_value_equal(evalue, value)) {
-                match = true;
+                is_valid = true;
                 break;
             }
         }
 
-        if (!match) {
+        if (!is_valid) {
             c_set_error("value does not match 'enum' constraint");
             return -1;
         }
@@ -979,19 +979,19 @@ json_generic_validator_check(struct json_generic_validator *validator,
 
     /* allOf */
     if (validator->all_of) {
-        match = true;
+        is_valid = true;
 
         for (size_t i = 0; i < c_ptr_vector_length(validator->all_of); i++) {
             struct json_schema *sschema;
 
             sschema = c_ptr_vector_entry(validator->all_of, i);
             if (json_schema_validate(sschema, value) == -1) {
-                match = false;
+                is_valid = false;
                 break;
             }
         }
 
-        if (!match) {
+        if (!is_valid) {
             c_set_error("value does not match 'allOf' constraint");
             return -1;
         }
@@ -999,19 +999,19 @@ json_generic_validator_check(struct json_generic_validator *validator,
 
     /* anyOf */
     if (validator->any_of) {
-        match = false;
+        is_valid = false;
 
         for (size_t i = 0; i < c_ptr_vector_length(validator->any_of); i++) {
             struct json_schema *sschema;
 
             sschema = c_ptr_vector_entry(validator->any_of, i);
             if (json_schema_validate(sschema, value) == 0) {
-                match = true;
+                is_valid = true;
                 break;
             }
         }
 
-        if (!match) {
+        if (!is_valid) {
             c_set_error("value does not match 'anyOf' constraint");
             return -1;
         }

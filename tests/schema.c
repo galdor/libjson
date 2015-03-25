@@ -213,13 +213,48 @@ TEST(generic) {
     JSONT_SCHEMA_VALID("{\"enum\": [[], [1], [1,2]]}", "[1,2]");
     JSONT_SCHEMA_INVALID("{\"enum\": [[], [1], [1,2]]}", "[1,2,3]");
 
-    /* TODO allOf */
+    /* allOf */
+    JSONT_SCHEMA_VALID("{\"allOf\": [{\"type\": \"array\"},"
+                                    "{\"minItems\": 3}]}",
+                       "[1,2,3]");
+    JSONT_SCHEMA_INVALID("{\"allOf\": [{\"type\": \"array\"},"
+                                      "{\"minItems\": 3}]}",
+                         "[1,2]");
+    JSONT_SCHEMA_INVALID("{\"allOf\": [{\"type\": \"array\"},"
+                                      "{\"minItems\": 3}]}",
+                         "{}");
 
-    /* TODO anyOf */
+    /* anyOf */
+    JSONT_SCHEMA_VALID("{\"anyOf\": [{\"type\": \"object\"},"
+                                    "{\"type\": \"array\", \"minItems\": 3}]}",
+                       "{}");
+    JSONT_SCHEMA_VALID("{\"anyOf\": [{\"type\": \"object\"},"
+                                    "{\"type\": \"array\", \"minItems\": 3}]}",
+                       "[1, 2, 3]");
+    JSONT_SCHEMA_VALID("{\"anyOf\": [{\"type\": \"array\"},"
+                                    "{\"minItems\": 2}]}",
+                       "[1,2,3]");
+    JSONT_SCHEMA_INVALID("{\"anyOf\": [{\"type\": \"object\"},"
+                                      "{\"type\": \"array\", \"minItems\": 3}]}",
+                         "[1]");
 
-    /* TODO oneOf */
+    /* oneOf */
+    JSONT_SCHEMA_VALID("{\"oneOf\": [{\"type\": \"object\"},"
+                                    "{\"type\": \"array\", \"minItems\": 3}]}",
+                       "{}");
+    JSONT_SCHEMA_VALID("{\"oneOf\": [{\"type\": \"object\"},"
+                                    "{\"type\": \"array\", \"minItems\": 3}]}",
+                       "[1, 2, 3]");
+    JSONT_SCHEMA_INVALID("{\"oneOf\": [{\"type\": \"array\"},"
+                                      "{\"minItems\": 2}]}",
+                         "[1,2,3]");
+    JSONT_SCHEMA_INVALID("{\"oneOf\": [{\"type\": \"object\"},"
+                                      "{\"type\": \"array\", \"minItems\": 3}]}",
+                         "[1]");
 
-    /* TODO not */
+    /* not */
+    JSONT_SCHEMA_VALID("{\"not\": {\"type\": \"object\"}}", "[]");
+    JSONT_SCHEMA_INVALID("{\"not\": {\"type\": \"object\"}}", "{}");
 
     /* TODO format */
 }
