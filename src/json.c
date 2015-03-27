@@ -636,16 +636,6 @@ json_string_new(const char *string) {
     return value;
 }
 
-const char *
-json_string_value(const struct json_value *value) {
-    return value->u.string.ptr;
-}
-
-size_t
-json_string_length(const struct json_value *value) {
-    return value->u.string.len;
-}
-
 struct json_value *
 json_string_new2(const char *string, size_t length) {
     struct json_value *value;
@@ -664,6 +654,21 @@ json_string_new2(const char *string, size_t length) {
 
     memcpy(value->u.string.ptr, string, length + 1);
     return value;
+}
+
+const char *
+json_string_value(const struct json_value *value) {
+    return value->u.string.ptr;
+}
+
+size_t
+json_string_length(const struct json_value *value) {
+    return value->u.string.len;
+}
+
+char *
+json_string_dup(const struct json_value *value) {
+    return c_strndup(value->u.string.ptr, value->u.string.len);
 }
 
 struct json_value *

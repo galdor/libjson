@@ -105,6 +105,7 @@ struct json_value *json_string_new(const char *);
 struct json_value *json_string_new2(const char *, size_t);
 const char *json_string_value(const struct json_value *);
 size_t json_string_length(const struct json_value *);
+char *json_string_dup(const struct json_value *);
 
 struct json_value *json_boolean_new(bool);
 bool json_boolean_value(const struct json_value *);
