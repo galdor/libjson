@@ -656,6 +656,25 @@ json_string_new2(const char *string, size_t length) {
     return value;
 }
 
+struct json_value *
+json_string_new_nocopy(char *string) {
+    return json_string_new_nocopy2(string, strlen(string));
+}
+
+struct json_value *
+json_string_new_nocopy2(char *string, size_t length) {
+    struct json_value *value;
+
+    value = json_value_new(JSON_STRING);
+    if (!value)
+        return NULL;
+
+    value->u.string.ptr = string;
+    value->u.string.len = length;
+
+    return value;
+}
+
 const char *
 json_string_value(const struct json_value *value) {
     return value->u.string.ptr;
