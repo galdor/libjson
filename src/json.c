@@ -626,13 +626,12 @@ json_string_new(const char *string) {
     length = strlen(string);
     value->u.string.len = length;
 
-    value->u.string.ptr = c_malloc(length + 1);
+    value->u.string.ptr = c_strndup(string, length);
     if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;
     }
 
-    memcpy(value->u.string.ptr, string, length + 1);
     return value;
 }
 
@@ -646,13 +645,12 @@ json_string_new2(const char *string, size_t length) {
 
     value->u.string.len = length;
 
-    value->u.string.ptr = c_malloc(length + 1);
+    value->u.string.ptr = c_strndup(string, length);
     if (!value->u.string.ptr) {
         json_value_delete(value);
         return NULL;
     }
 
-    memcpy(value->u.string.ptr, string, length + 1);
     return value;
 }
 
