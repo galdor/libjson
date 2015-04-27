@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Nicolas Martyanoff
+ * Copyright (c) 2014-2015 Nicolas Martyanoff
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
