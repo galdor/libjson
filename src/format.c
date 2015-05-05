@@ -70,14 +70,28 @@ static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
         }                                                \
     }
 
+int
+json_value_format_to_buffer(struct json_value *value, struct c_buffer *buf,
+                            uint32_t opts) {
+    struct json_format_ctx ctx;
+
+    json_value_sort_objects_by_index(value);
+
+    memset(&ctx, 0, sizeof(struct json_format_ctx));
+    ctx.opts = opts;
+    ctx.indent = 0;
+
+    if (json_format_value(value, buf, &ctx) == -1)
+        return -1;
+
+    return 0;
+}
+
 char *
 json_value_format(struct json_value *value, uint32_t opts, size_t *plen) {
-    struct json_format_ctx ctx;
     struct c_buffer *buf;
     char *data;
     size_t length;
-
-    json_value_sort_objects_by_index(value);
 
     buf = c_buffer_new();
     if (!buf) {
@@ -85,18 +99,12 @@ json_value_format(struct json_value *value, uint32_t opts, size_t *plen) {
         return NULL;
     }
 
-    memset(&ctx, 0, sizeof(struct json_format_ctx));
-    ctx.opts = opts;
-    ctx.indent = 0;
-
-    if (json_format_value(value, buf, &ctx) == -1)
+    if (json_value_format_to_buffer(value, buf, opts) == -1)
         goto error;
 
     data = c_buffer_extract_string(buf, &length);
-    if (!data) {
-        c_set_error("%s", c_get_error());
+    if (!data)
         goto error;
-    }
 
     if (plen)
         *plen = length;

@@ -63,6 +63,8 @@ enum json_format_option {
     JSON_FORMAT_ESCAPE_SOLIDUS = (1 << 2),
 };
 
+int json_value_format_to_buffer(struct json_value *, struct c_buffer *,
+                                uint32_t);
 char *json_value_format(struct json_value *, uint32_t, size_t *);
 
 struct json_value *json_object_new(void);
