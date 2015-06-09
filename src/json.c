@@ -244,6 +244,48 @@ json_value_type(const struct json_value *value) {
     return value->type;
 }
 
+bool
+json_value_is_object(const struct json_value *value) {
+    return value->type == JSON_OBJECT;
+}
+
+bool
+json_value_is_array(const struct json_value *value) {
+    return value->type == JSON_ARRAY;
+}
+
+bool
+json_value_is_integer(const struct json_value *value) {
+    return value->type == JSON_INTEGER;
+}
+
+bool
+json_value_is_real(const struct json_value *value) {
+    return value->type == JSON_REAL;
+}
+
+bool
+json_value_is_number(const struct json_value *value) {
+    return value->type == JSON_INTEGER
+        || value->type == JSON_REAL;
+}
+
+bool
+json_value_is_string(const struct json_value *value) {
+    return value->type == JSON_STRING;
+}
+
+bool
+json_value_is_boolean(const struct json_value *value) {
+    return value->type == JSON_BOOLEAN;
+}
+
+bool
+json_value_is_null(const struct json_value *value) {
+    return value->type == JSON_NULL;
+}
+
+
 struct json_value *
 json_object_new(void) {
     return json_value_new(JSON_OBJECT);

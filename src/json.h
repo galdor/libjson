@@ -55,6 +55,15 @@ bool json_value_equal(struct json_value *, struct json_value *);
 
 enum json_type json_value_type(const struct json_value *);
 
+bool json_value_is_object(const struct json_value *);
+bool json_value_is_array(const struct json_value *);
+bool json_value_is_integer(const struct json_value *);
+bool json_value_is_real(const struct json_value *);
+bool json_value_is_number(const struct json_value *);
+bool json_value_is_string(const struct json_value *);
+bool json_value_is_boolean(const struct json_value *);
+bool json_value_is_null(const struct json_value *);
+
 enum json_format_option {
     JSON_FORMAT_DEFAULT        = 0,
 
