@@ -56,18 +56,14 @@ static int json_format_indent(struct c_buffer *, struct json_format_ctx *);
 
 #define JSON_SET_ANSI_COLOR(ctx_, buf_, color_)                        \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {                         \
-        if (c_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1) {  \
-            c_set_error("%s", c_get_error());                          \
+        if (c_buffer_add_printf(buf_, "\e[%dm", 30 + color_) == -1)    \
             return 1;                                                  \
-        }                                                              \
     }
 
 #define JSON_CLEAR_ANSI_COLOR(ctx_, buf_)                \
     if (ctx_->opts & JSON_FORMAT_COLOR_ANSI) {           \
-        if (c_buffer_add_string(buf_, "\e[0m") == -1) {  \
-            c_set_error("%s", c_get_error());            \
+        if (c_buffer_add_string(buf_, "\e[0m") == -1)    \
             return 1;                                    \
-        }                                                \
     }
 
 int
@@ -94,10 +90,8 @@ json_value_format(struct json_value *value, uint32_t opts, size_t *plen) {
     size_t length;
 
     buf = c_buffer_new();
-    if (!buf) {
-        c_set_error("%s", c_get_error());
+    if (!buf)
         return NULL;
-    }
 
     if (json_value_format_to_buffer(value, buf, opts) == -1)
         goto error;
@@ -151,16 +145,12 @@ json_format_value(const struct json_value *value, struct c_buffer *buf,
 static int
 json_format_object(const struct json_object *object, struct c_buffer *buf,
                    struct json_format_ctx *ctx) {
-    if (c_buffer_add_string(buf, "{") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "{") == -1)
         return -1;
-    }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (c_buffer_add_string(buf, "\n") == -1) {
-            c_set_error("%s", c_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
-        }
 
         ctx->indent += 2;
     }
@@ -171,16 +161,12 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
         member = object->members + i;
 
         if (i > 0) {
-            if (c_buffer_add_string(buf, ", ") == -1) {
-                c_set_error("%s", c_get_error());
+            if (c_buffer_add_string(buf, ", ") == -1)
                 return -1;
-            }
 
             if (ctx->opts & JSON_FORMAT_INDENT) {
-                if (c_buffer_add_string(buf, "\n") == -1) {
-                    c_set_error("%s", c_get_error());
+                if (c_buffer_add_string(buf, "\n") == -1)
                     return -1;
-                }
             }
         }
 
@@ -192,20 +178,16 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
         if (json_format_value(member->key, buf, ctx) == -1)
             return -1;
 
-        if (c_buffer_add_string(buf, ": ") == -1) {
-            c_set_error("%s", c_get_error());
+        if (c_buffer_add_string(buf, ": ") == -1)
             return -1;
-        }
 
         if (json_format_value(member->value, buf, ctx) == -1)
             return -1;
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (c_buffer_add_string(buf, "\n") == -1) {
-            c_set_error("%s", c_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
-        }
 
         ctx->indent -= 2;
 
@@ -213,10 +195,8 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
             return -1;
     }
 
-    if (c_buffer_add_string(buf, "}") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "}") == -1)
         return -1;
-    }
 
     return 0;
 }
@@ -224,16 +204,12 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
 static int
 json_format_array(const struct json_array *array, struct c_buffer *buf,
                   struct json_format_ctx *ctx) {
-    if (c_buffer_add_string(buf, "[") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "[") == -1)
         return -1;
-    }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (c_buffer_add_string(buf, "\n") == -1) {
-            c_set_error("%s", c_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
-        }
 
         ctx->indent += 2;
     }
@@ -244,16 +220,12 @@ json_format_array(const struct json_array *array, struct c_buffer *buf,
         child = array->elements[i];
 
         if (i > 0) {
-            if (c_buffer_add_string(buf, ", ") == -1) {
-                c_set_error("%s", c_get_error());
+            if (c_buffer_add_string(buf, ", ") == -1)
                 return -1;
-            }
 
             if (ctx->opts & JSON_FORMAT_INDENT) {
-                if (c_buffer_add_string(buf, "\n") == -1) {
-                    c_set_error("%s", c_get_error());
+                if (c_buffer_add_string(buf, "\n") == -1)
                     return -1;
-                }
             }
         }
 
@@ -267,10 +239,8 @@ json_format_array(const struct json_array *array, struct c_buffer *buf,
     }
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
-        if (c_buffer_add_string(buf, "\n") == -1) {
-            c_set_error("%s", c_get_error());
+        if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
-        }
 
         ctx->indent -= 2;
 
@@ -278,10 +248,8 @@ json_format_array(const struct json_array *array, struct c_buffer *buf,
             return -1;
     }
 
-    if (c_buffer_add_string(buf, "]") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "]") == -1)
         return -1;
-    }
 
     return 0;
 }
@@ -292,7 +260,6 @@ json_format_integer(int64_t integer, struct c_buffer *buf,
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
 
     if (c_buffer_add_printf(buf, "%"PRIi64, integer) == -1) {
-        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -307,7 +274,6 @@ json_format_real(double real, struct c_buffer *buf,
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
 
     if (c_buffer_add_printf(buf, "%.17g", real) == -1) {
-        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -322,10 +288,8 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
     const char *ptr;
     size_t len;
 
-    if (c_buffer_add_string(buf, "\"") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "\"") == -1)
         return -1;
-    }
 
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_YELLOW);
 
@@ -382,10 +346,8 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
             continue;
         }
 
-        if (ret == -1) {
-            c_set_error("%s", c_get_error());
+        if (ret == -1)
             goto error;
-        }
 
         ptr++;
         len--;
@@ -393,10 +355,8 @@ json_format_string(const char *string, size_t length, struct c_buffer *buf,
 
     JSON_CLEAR_ANSI_COLOR(ctx, buf);
 
-    if (c_buffer_add_string(buf, "\"") == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add_string(buf, "\"") == -1)
         return -1;
-    }
 
     return 0;
 
@@ -411,7 +371,6 @@ json_format_boolean(bool boolean, struct c_buffer *buf,
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
 
     if (c_buffer_add_string(buf, boolean ? "true" : "false") == -1) {
-        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -425,7 +384,6 @@ json_format_null(struct c_buffer *buf, struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_GREEN);
 
     if (c_buffer_add_string(buf, "null") == -1) {
-        c_set_error("%s", c_get_error());
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
@@ -448,10 +406,8 @@ json_format_indent(struct c_buffer *buf, struct json_format_ctx *ctx) {
     tmp = alloca(ctx->indent);
     memset(tmp, ' ', ctx->indent);
 
-    if (c_buffer_add(buf, tmp, ctx->indent) == -1) {
-        c_set_error("%s", c_get_error());
+    if (c_buffer_add(buf, tmp, ctx->indent) == -1)
         return -1;
-    }
 
     return 0;
 }
