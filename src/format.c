@@ -149,6 +149,13 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
         return -1;
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (object->nb_members == 0) {
+            if (c_buffer_add_string(buf, "}") == -1)
+                return -1;
+
+            return 0;
+        }
+
         if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
 
@@ -208,6 +215,13 @@ json_format_array(const struct json_array *array, struct c_buffer *buf,
         return -1;
 
     if (ctx->opts & JSON_FORMAT_INDENT) {
+        if (array->nb_elements == 0) {
+            if (c_buffer_add_string(buf, "]") == -1)
+                return -1;
+
+            return 0;
+        }
+
         if (c_buffer_add_string(buf, "\n") == -1)
             return -1;
 
