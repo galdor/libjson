@@ -46,7 +46,7 @@ static int json_format_integer(int64_t, struct c_buffer *,
 static int json_format_real(double, struct c_buffer *,
                             struct json_format_ctx *);
 static int json_format_string(const char *, size_t, struct c_buffer *,
-                              struct json_format_ctx *);
+                              struct json_format_ctx *, int);
 static int json_format_boolean(bool, struct c_buffer *,
                                struct json_format_ctx *);
 static int json_format_null(struct c_buffer *,
@@ -129,7 +129,7 @@ json_format_value(const struct json_value *value, struct c_buffer *buf,
 
     case JSON_STRING:
         return json_format_string(value->u.string.ptr, value->u.string.len,
-                                  buf, ctx);
+                                  buf, ctx, JSON_ANSI_COLOR_RED);
 
     case JSON_BOOLEAN:
         return json_format_boolean(value->u.boolean, buf, ctx);
@@ -163,9 +163,12 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
     }
 
     for (size_t i = 0; i < object->nb_members; i++) {
-        struct json_object_member *member;
+        const struct json_object_member *member;
+        const struct json_value *key, *value;
 
         member = object->members + i;
+        key = member->key;
+        value = member->value;
 
         if (i > 0) {
             if (c_buffer_add_string(buf, ", ") == -1)
@@ -182,13 +185,15 @@ json_format_object(const struct json_object *object, struct c_buffer *buf,
                 return -1;
         }
 
-        if (json_format_value(member->key, buf, ctx) == -1)
+        if (json_format_string(key->u.string.ptr, key->u.string.len,
+                               buf, ctx, JSON_ANSI_COLOR_YELLOW) == -1) {
             return -1;
+        }
 
         if (c_buffer_add_string(buf, ": ") == -1)
             return -1;
 
-        if (json_format_value(member->value, buf, ctx) == -1)
+        if (json_format_value(value, buf, ctx) == -1)
             return -1;
     }
 
@@ -298,14 +303,14 @@ json_format_real(double real, struct c_buffer *buf,
 
 static int
 json_format_string(const char *string, size_t length, struct c_buffer *buf,
-                   struct json_format_ctx *ctx) {
+                   struct json_format_ctx *ctx, int color) {
     const char *ptr;
     size_t len;
 
     if (c_buffer_add_string(buf, "\"") == -1)
         return -1;
 
-    JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_YELLOW);
+    JSON_SET_ANSI_COLOR(ctx, buf, color);
 
     ptr = string;
     len = length;
