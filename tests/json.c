@@ -20,131 +20,176 @@
 TEST(arrays) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[]", 0,
-                      JSON_PARSE_DEFAULT);
-    JSONT_END();
+    JSONT_PARSE_ARRAY("[]", 0, JSON_PARSE_DEFAULT);
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY(" [\t\n ] ", 0,
-                      JSON_PARSE_DEFAULT);
-    JSONT_END();
+    JSONT_PARSE_ARRAY(" [\t\n ] ", 0, JSON_PARSE_DEFAULT);
+    json_value_delete(value);
 }
 
 TEST(integers) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[0, 1, -1, 42, -127]", 5,
-                      JSON_PARSE_DEFAULT);
-    JSONT_INTEGER_EQ(json_array_element(value, 0), 0);
-    JSONT_INTEGER_EQ(json_array_element(value, 1), 1);
-    JSONT_INTEGER_EQ(json_array_element(value, 2), -1);
-    JSONT_INTEGER_EQ(json_array_element(value, 3), 42);
-    JSONT_INTEGER_EQ(json_array_element(value, 4), -127);
-    JSONT_END();
+    JSONT_PARSE("0", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, 0);
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[-9223372036854775808, 9223372036854775807]", 2,
-                      JSON_PARSE_DEFAULT);
-    JSONT_INTEGER_EQ(json_array_element(value, 0), INT64_MIN);
-    JSONT_INTEGER_EQ(json_array_element(value, 1), INT64_MAX);
-    JSONT_END();
+    JSONT_PARSE("1", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, 1);
+    json_value_delete(value);
+
+    JSONT_PARSE("-1", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, -1);
+    json_value_delete(value);
+
+    JSONT_PARSE("42", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, 42);
+    json_value_delete(value);
+
+    JSONT_PARSE("-127", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, -127);
+    json_value_delete(value);
+
+    JSONT_PARSE("-9223372036854775808", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, INT64_MIN);
+    json_value_delete(value);
+
+    JSONT_PARSE("9223372036854775807", JSON_PARSE_DEFAULT);
+    JSONT_INTEGER_EQ(value, INT64_MAX);
+    json_value_delete(value);
 }
 
 TEST(reals) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[0.0, -0.1, 1337.0042, 5e3, -4.38e117]", 5,
-                      JSON_PARSE_DEFAULT);
-    JSONT_REAL_EQ(json_array_element(value, 0), 0.0);
-    JSONT_REAL_EQ(json_array_element(value, 1), -0.1);
-    JSONT_REAL_EQ(json_array_element(value, 2), 1337.0042);
-    JSONT_REAL_EQ(json_array_element(value, 3), 5e3);
-    JSONT_REAL_EQ(json_array_element(value, 4), -4.38e117);
-    JSONT_END();
+    JSONT_PARSE("0.0", JSON_PARSE_DEFAULT);
+    JSONT_REAL_EQ(value, 0.0);
+    json_value_delete(value);
+
+    JSONT_PARSE("-0.1", JSON_PARSE_DEFAULT);
+    JSONT_REAL_EQ(value, -0.1);
+    json_value_delete(value);
+
+    JSONT_PARSE("1337.0042", JSON_PARSE_DEFAULT);
+    JSONT_REAL_EQ(value, 1337.0042);
+    json_value_delete(value);
+
+    JSONT_PARSE("5e3", JSON_PARSE_DEFAULT);
+    JSONT_REAL_EQ(value, 5e3);
+    json_value_delete(value);
+
+    JSONT_PARSE("-4.38e117", JSON_PARSE_DEFAULT);
+    JSONT_REAL_EQ(value, -4.38e117);
+    json_value_delete(value);
 }
 
 TEST(strings) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[\"\", \"a\", \"foo bar\"]", 3,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "");
-    JSONT_STRING_EQ(json_array_element(value, 1), "a");
-    JSONT_STRING_EQ(json_array_element(value, 2), "foo bar");
-    JSONT_END();
+    JSONT_PARSE("\"\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[\"\\\"\", \"\\\\\", \"\\/\"]", 3,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "\"");
-    JSONT_STRING_EQ(json_array_element(value, 1), "\\");
-    JSONT_STRING_EQ(json_array_element(value, 2), "/");
-    JSONT_END();
+    JSONT_PARSE("\"a\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "a");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[\"\\b\\f\\n\\r\\t\"]", 1,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "\b\f\n\r\t");
-    JSONT_END();
+    JSONT_PARSE("\"foo bar\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "foo bar");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[\"\\u0061\", \"\\u00e0\\U00E9\"]", 2,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "a");
-    JSONT_STRING_EQ(json_array_element(value, 1), "àé");
-    JSONT_END();
+    JSONT_PARSE("\"\\\"\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "\"");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[\"\\u250c\\u2500\\u2510\"]", 1,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "┌─┐");
-    JSONT_END();
+    JSONT_PARSE("\"\\\\\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "\\");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY("[\"\\ud834\\udd1e\", \"\\UD834\\UDD1E\"]", 2,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING_EQ(json_array_element(value, 0), "𝄞");
-    JSONT_STRING_EQ(json_array_element(value, 1), "𝄞");
-    JSONT_END();
+    JSONT_PARSE("\"\\/\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "/");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY2("[\"foo\0bar\", \"\0tail\", \"head\0\"]", 29, 3,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING2_EQ(json_array_element(value, 0), "foo\0bar", 7);
-    JSONT_STRING2_EQ(json_array_element(value, 1), "\0tail", 5);
-    JSONT_STRING2_EQ(json_array_element(value, 2), "head\0", 5);
-    JSONT_END();
+    JSONT_PARSE("\"\\b\\f\\n\\r\\t\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "\b\f\n\r\t");
+    json_value_delete(value);
 
-    JSONT_BEGIN_ARRAY2("[\"foo\\u0000bar\", \"\\u0000tail\", \"head\\u0000\"]",
-                       44, 3,
-                      JSON_PARSE_DEFAULT);
-    JSONT_STRING2_EQ(json_array_element(value, 0), "foo\0bar", 7);
-    JSONT_STRING2_EQ(json_array_element(value, 1), "\0tail", 5);
-    JSONT_STRING2_EQ(json_array_element(value, 2), "head\0", 5);
-    JSONT_END();
+    JSONT_PARSE("\"\\u0061\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "a");
+    json_value_delete(value);
+
+    JSONT_PARSE("\"\\u00e0\\U00E9\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "àé");
+    json_value_delete(value);
+
+    JSONT_PARSE("\"\\u250c\\u2500\\u2510\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "┌─┐");
+    json_value_delete(value);
+
+    JSONT_PARSE("\"\\ud834\\udd1e\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "𝄞");
+    json_value_delete(value);
+
+    JSONT_PARSE("\"\\UD834\\UDD1E\"", JSON_PARSE_DEFAULT);
+    JSONT_STRING_EQ(value, "𝄞");
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"foo\0bar\"", 9, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "foo\0bar", 7);
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"\0tail\"", 7, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "\0tail", 5);
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"head\0\"", 7, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "head\0", 5);
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"foo\\u0000bar\"", 14, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "foo\0bar", 7);
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"\\u0000tail\"", 12, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "\0tail", 5);
+    json_value_delete(value);
+
+    JSONT_PARSE2("\"head\\u0000\"", 12, JSON_PARSE_DEFAULT);
+    JSONT_STRING2_EQ(value, "head\0", 5);
+    json_value_delete(value);
 }
 
 TEST(booleans) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[true, false]", 2,
-                      JSON_PARSE_DEFAULT);
-    JSONT_BOOLEAN_EQ(json_array_element(value, 0), true);
-    JSONT_BOOLEAN_EQ(json_array_element(value, 1), false);
-    JSONT_END();
+    JSONT_PARSE("true", JSON_PARSE_DEFAULT);
+    JSONT_BOOLEAN_EQ(value, true);
+    json_value_delete(value);
+
+    JSONT_PARSE("false", JSON_PARSE_DEFAULT);
+    JSONT_BOOLEAN_EQ(value, false);
+    json_value_delete(value);
 }
 
 TEST(null) {
     struct json_value *value;
 
-    JSONT_BEGIN_ARRAY("[null]", 1, JSON_PARSE_DEFAULT);
-    JSONT_NULL_EQ(json_array_element(value, 0));
-    JSONT_END();
+    JSONT_PARSE("null", JSON_PARSE_DEFAULT);
+    JSONT_NULL_EQ(value);
+    json_value_delete(value);
 }
 
 TEST(objects) {
     struct json_value *value, *child;
     const char *key;
 
-    JSONT_BEGIN_OBJECT("{}", 0, JSON_PARSE_DEFAULT);
-    JSONT_END();
+    JSONT_PARSE_OBJECT("{}", 0, JSON_PARSE_DEFAULT);
+    json_value_delete(value);
 
-    JSONT_BEGIN_OBJECT(" {\t\n  } ", 0, JSON_PARSE_DEFAULT);
-    JSONT_END();
+    JSONT_PARSE_OBJECT(" {\t\n  } ", 0, JSON_PARSE_DEFAULT);
+    json_value_delete(value);
 
-    JSONT_BEGIN_OBJECT("{\"a\": 1, \"b\"  :2  ,  \"c\":3}", 3,
+    JSONT_PARSE_OBJECT("{\"a\": 1, \"b\"  :2  ,  \"c\":3}", 3,
                       JSON_PARSE_DEFAULT);
     TEST_TRUE(json_object_has_member(value, "a"));
     JSONT_INTEGER_EQ(json_object_member(value, "a"), 1);
@@ -152,17 +197,17 @@ TEST(objects) {
     JSONT_INTEGER_EQ(json_object_member(value, "b"), 2);
     TEST_TRUE(json_object_has_member(value, "c"));
     JSONT_INTEGER_EQ(json_object_member(value, "c"), 3);
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN_OBJECT("{\"\": 1, \"   \": 2}", 2,
+    JSONT_PARSE_OBJECT("{\"\": 1, \"   \": 2}", 2,
                       JSON_PARSE_DEFAULT);
     TEST_TRUE(json_object_has_member(value, ""));
     JSONT_INTEGER_EQ(json_object_member(value, ""), 1);
     TEST_TRUE(json_object_has_member(value, "   "));
     JSONT_INTEGER_EQ(json_object_member(value, "   "), 2);
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN_OBJECT2("{\"foo\0bar\": 1, \"\0tail\": 2, \"head\0\": 3}", 38, 3,
+    JSONT_PARSE_OBJECT2("{\"foo\0bar\": 1, \"\0tail\": 2, \"head\0\": 3}", 38, 3,
                       JSON_PARSE_DEFAULT);
     TEST_TRUE(json_object_has_member2(value, "foo\0bar", 7));
     JSONT_INTEGER_EQ(json_object_member2(value, "foo\0bar", 7), 1);
@@ -170,9 +215,9 @@ TEST(objects) {
     JSONT_INTEGER_EQ(json_object_member2(value, "\0tail", 5), 2);
     TEST_TRUE(json_object_has_member2(value, "head\0", 5));
     JSONT_INTEGER_EQ(json_object_member2(value, "head\0", 5), 3);
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN_OBJECT("{\"a\": {\"aa\": 1}, \"b\": [{\"ba\": 1, \"bb\": 2}]}", 2,
+    JSONT_PARSE_OBJECT("{\"a\": {\"aa\": 1}, \"b\": [{\"ba\": 1, \"bb\": 2}]}", 2,
                       JSON_PARSE_DEFAULT);
     TEST_TRUE(json_object_has_member(value, "a"));
     child = json_object_member(value, "a");
@@ -193,10 +238,10 @@ TEST(objects) {
     JSONT_INTEGER_EQ(json_object_member(child, "ba"), 1);
     TEST_TRUE(json_object_has_member(child, "bb"));
     JSONT_INTEGER_EQ(json_object_member(child, "bb"), 2);
-    JSONT_END();
+    json_value_delete(value);
 
     /* Duplicate keys */
-    JSONT_BEGIN_OBJECT("{\"a\": 1, \"a\": 2}", 2, JSON_PARSE_DEFAULT);
+    JSONT_PARSE_OBJECT("{\"a\": 1, \"a\": 2}", 2, JSON_PARSE_DEFAULT);
     TEST_UINT_EQ(json_object_nb_members(value), 2);
     TEST_TRUE(json_object_has_member(value, "a"));
     child = json_object_member(value, "a");
@@ -212,21 +257,21 @@ TEST(objects) {
     TEST_STRING_EQ(key, "a");
     TEST_PTR_NOT_NULL(child);
     JSONT_INTEGER_EQ(child, 2);
-    JSONT_END();
+    json_value_delete(value);
 }
 
 TEST(object_iterators) {
     struct json_value *value, *key, *val;
     struct json_object_iterator *it;
 
-    JSONT_BEGIN("{}", JSON_PARSE_DEFAULT);
+    JSONT_PARSE("{}", JSON_PARSE_DEFAULT);
     it = json_object_iterate(value);
     TEST_INT_EQ(json_object_iterator_get_next(it, &key, &val), 0);
     TEST_INT_EQ(json_object_iterator_get_next(it, &key, &val), 0);
     json_object_iterator_delete(it);
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3}",
+    JSONT_PARSE("{\"a\": 1, \"b\": 2, \"c\": 3}",
                 JSON_PARSE_DEFAULT);
     it = json_object_iterate(value);
     TEST_INT_EQ(json_object_iterator_get_next(it, &key, &val), 1);
@@ -241,20 +286,20 @@ TEST(object_iterators) {
     TEST_INT_EQ(json_object_iterator_get_next(it, &key, &val), 0);
     TEST_INT_EQ(json_object_iterator_get_next(it, &key, &val), 0);
     json_object_iterator_delete(it);
-    JSONT_END();
+    json_value_delete(value);
 }
 
 TEST(object_remove_member) {
     struct json_value *value;
 
-    JSONT_BEGIN("{\"a\": 1}",
+    JSONT_PARSE("{\"a\": 1}",
                 JSON_PARSE_DEFAULT);
     json_object_remove_member(value, "a");
     TEST_UINT_EQ(json_object_nb_members(value), 0);
     TEST_FALSE(json_object_has_member(value, "a"));
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3, \"d\": 4, \"e\": 5}",
+    JSONT_PARSE("{\"a\": 1, \"b\": 2, \"c\": 3, \"d\": 4, \"e\": 5}",
                 JSON_PARSE_DEFAULT);
     json_object_remove_member(value, "a");
     TEST_UINT_EQ(json_object_nb_members(value), 4);
@@ -265,34 +310,29 @@ TEST(object_remove_member) {
     json_object_remove_member(value, "e");
     TEST_UINT_EQ(json_object_nb_members(value), 2);
     TEST_FALSE(json_object_has_member(value, "e"));
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN("{}", JSON_PARSE_DEFAULT);
+    JSONT_PARSE("{}", JSON_PARSE_DEFAULT);
     json_object_remove_member(value, "a");
     TEST_UINT_EQ(json_object_nb_members(value), 0);
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN("{\"a\": 1}", JSON_PARSE_DEFAULT);
+    JSONT_PARSE("{\"a\": 1}", JSON_PARSE_DEFAULT);
     json_object_remove_member(value, "b");
     TEST_UINT_EQ(json_object_nb_members(value), 1);
     TEST_TRUE(json_object_has_member(value, "a"));
-    JSONT_END();
+    json_value_delete(value);
 
-    JSONT_BEGIN("{\"a\": 1, \"b\": 2, \"c\": 3, \"b\": 4}",
+    JSONT_PARSE("{\"a\": 1, \"b\": 2, \"c\": 3, \"b\": 4}",
                 JSON_PARSE_DEFAULT);
     json_object_remove_member(value, "b");
     TEST_UINT_EQ(json_object_nb_members(value), 2);
     TEST_FALSE(json_object_has_member(value, "b"));
-    JSONT_END();
+    json_value_delete(value);
 }
 
 TEST(invalid) {
     JSONT_IS_INVALID("", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("1", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("1.0", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("\"\"", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("true", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("null", JSON_PARSE_DEFAULT);
 }
 
 TEST(invalid_arrays) {
@@ -309,44 +349,43 @@ TEST(invalid_arrays) {
 }
 
 TEST(invalid_integers) {
-    JSONT_IS_INVALID("[92233720368547758080]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[9223372036854775808]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[-9223372036854775809]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[1foo]", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("92233720368547758080", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("9223372036854775808", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("-9223372036854775809", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("1foo", JSON_PARSE_DEFAULT);
 }
 
 TEST(invalid_reals) {
-    JSONT_IS_INVALID("[1.0foo]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[1.0efoo]", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("1.0foo", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("1.0efoo", JSON_PARSE_DEFAULT);
 }
 
 TEST(invalid_strings) {
-    JSONT_IS_INVALID("[\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\i\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\u\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\u000\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\u00gh\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\U\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\U000\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\U00gh\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\ud834\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\ud834\\u\"]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[\"\\ud834\\udd1\"]", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\i\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\u\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\u000\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\u00gh\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\U\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\U000\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\U00gh\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\ud834\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\ud834\\u\"", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("\"\\ud834\\udd1\"", JSON_PARSE_DEFAULT);
 
-    JSONT_IS_INVALID("[\"\\u0000\"]", JSON_PARSE_REJECT_NULL_CHARACTERS);
-    JSONT_IS_INVALID("[\"abc\\u0000def\"]", JSON_PARSE_REJECT_NULL_CHARACTERS);
-    JSONT_IS_INVALID("[\"abc\0def\"]", JSON_PARSE_REJECT_NULL_CHARACTERS);
-    JSONT_IS_INVALID("[\"\0abc\0def\0\"]", JSON_PARSE_REJECT_NULL_CHARACTERS);
+    JSONT_IS_INVALID("\"\\u0000\"", JSON_PARSE_REJECT_NULL_CHARACTERS);
+    JSONT_IS_INVALID("\"abc\\u0000def\"", JSON_PARSE_REJECT_NULL_CHARACTERS);
+    JSONT_IS_INVALID("\"abc\0def\"", JSON_PARSE_REJECT_NULL_CHARACTERS);
+    JSONT_IS_INVALID("\"\0abc\0def\0\"", JSON_PARSE_REJECT_NULL_CHARACTERS);
 }
 
 TEST(invalid_literals) {
-    JSONT_IS_INVALID("[yes]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[nullx]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[t]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[f]", JSON_PARSE_DEFAULT);
-    JSONT_IS_INVALID("[n]", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("yes", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("t", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("f", JSON_PARSE_DEFAULT);
+    JSONT_IS_INVALID("n", JSON_PARSE_DEFAULT);
 }
 
 TEST(invalid_objects) {

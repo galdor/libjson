@@ -17,7 +17,7 @@
 #include "internal.h"
 
 void
-json_set_error_invalid_character(unsigned char c, const char *fmt, ...) {
+json_set_error_invalid_character(char c, const char *fmt, ...) {
     char buf[C_ERROR_BUFSZ];
     va_list ap;
     char *ptr;

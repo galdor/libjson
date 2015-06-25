@@ -36,12 +36,12 @@ static int json_parse_number(struct json_parser *, struct json_value **);
 static int json_parse_string(struct json_parser *, struct json_value **);
 static int json_parse_literal(struct json_parser *, struct json_value **);
 
-static bool json_is_ws(int);
-static bool json_is_boundary(int);
-static bool json_is_number_first_char(int);
-static bool json_is_number_char(int);
-static bool json_is_integer_char(int);
-static bool json_is_real_char(int);
+static bool json_is_ws(char);
+static bool json_is_boundary(char);
+static bool json_is_number_first_char(char);
+static bool json_is_number_char(char);
+static bool json_is_integer_char(char);
+static bool json_is_real_char(char);
 
 static char *json_decode_string(const struct json_parser *,
                                 const char *, size_t, size_t *);
@@ -63,12 +63,6 @@ json_parse(const char *buf, size_t sz, uint32_t options) {
 
     if (json_parse_value(&parser, &value) == -1)
         return NULL;
-
-    if (value->type != JSON_OBJECT && value->type != JSON_ARRAY) {
-        c_set_error("top-level value is neither an object nor an array");
-        json_value_delete(value);
-        return NULL;
-    }
 
     return value;
 }
@@ -134,7 +128,7 @@ json_parser_skip(struct json_parser *parser, size_t n) {
 
 static void
 json_parser_skip_ws(struct json_parser *parser) {
-    while (parser->len > 0 && json_is_ws((unsigned char)*parser->ptr)) {
+    while (parser->len > 0 && json_is_ws(*parser->ptr)) {
         parser->ptr++;
         parser->len--;
     }
@@ -153,10 +147,10 @@ json_parse_value(struct json_parser *parser, struct json_value **pvalue) {
     } else if (*parser->ptr == 't' || *parser->ptr == 'f'
             || *parser->ptr == 'n') {
         return json_parse_literal(parser, pvalue);
-    } else if (json_is_number_first_char((unsigned char)*parser->ptr)) {
+    } else if (json_is_number_first_char(*parser->ptr)) {
         return json_parse_number(parser, pvalue);
     } else {
-        json_set_error_invalid_character((unsigned char)*parser->ptr, " ");
+        json_set_error_invalid_character(*parser->ptr, " ");
         return -1;
     }
 }
@@ -203,8 +197,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
         json_parser_skip_ws(parser);
 
         if (*parser->ptr != ':') {
-            json_set_error_invalid_character((unsigned char)*parser->ptr,
-                                             " in object");
+            json_set_error_invalid_character(*parser->ptr, " in object");
             json_value_delete(key);
             goto error;
         }
@@ -254,8 +247,7 @@ json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
         } else if (*parser->ptr == '}') {
             break;
         } else {
-            json_set_error_invalid_character((unsigned char)*parser->ptr,
-                                             " in object");
+            json_set_error_invalid_character(*parser->ptr, " in object");
             goto error;
         }
     }
@@ -324,8 +316,7 @@ json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
         } else if (*parser->ptr == ']') {
             break;
         } else {
-            json_set_error_invalid_character((unsigned char)*parser->ptr,
-                                             " in array");
+            json_set_error_invalid_character(*parser->ptr, " in array");
             goto error;
         }
     }
@@ -351,21 +342,17 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
     const char *ptr, *start;
     size_t len, toklen;
     enum json_type type;
-    bool found;
 
     /* Search for the decimal point if there is one */
     ptr = parser->ptr;
     len = parser->len;
 
-    found = false;
+    type = JSON_INTEGER;
     while (len > 0) {
         if (*ptr == '.' || *ptr == 'e' || *ptr == 'E') {
             type = JSON_REAL;
-            found = true;
             break;
-        } else if (!json_is_number_char((unsigned char)*ptr)) {
-            type = JSON_INTEGER;
-            found = true;
+        } else if (!json_is_number_char(*ptr)) {
             break;
         }
 
@@ -373,25 +360,19 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
         len--;
     }
 
-    if (!found) {
-        c_set_error("truncated number");
-        return -1;
-    }
-
     start = parser->ptr;
 
     if (type == JSON_INTEGER) {
         char tmp[21]; /* INT64_MIN contains 20 digits */
-        long long llval;
+        int64_t i64;
 
         while (parser->len > 0) {
-            if (json_is_integer_char((unsigned char)*parser->ptr)) {
+            if (json_is_integer_char(*parser->ptr)) {
                 json_parser_skip(parser, 1);
-            } else if (json_is_boundary((unsigned char)*parser->ptr)) {
+            } else if (json_is_boundary(*parser->ptr)) {
                 break;
             } else {
-                json_set_error_invalid_character((unsigned char)*parser->ptr,
-                                                 " in integer");
+                json_set_error_invalid_character(*parser->ptr, " in integer");
                 return -1;
             }
         }
@@ -405,14 +386,10 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
         memcpy(tmp, start, toklen);
         tmp[toklen] = '\0';
 
-        errno = 0;
-        llval = strtoll(tmp, NULL, 10);
-        if (errno) {
-            c_set_error("%s", strerror(errno));
+        if (c_parse_i64(tmp, &i64, NULL) == -1)
             return -1;
-        }
 
-        value = json_integer_new((int64_t)llval);
+        value = json_integer_new(i64);
         if (!value)
             return -1;
     } else if (type == JSON_REAL) {
@@ -420,13 +397,12 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
         double real;
 
         while (parser->len > 0) {
-            if (json_is_real_char((unsigned char)*parser->ptr)) {
+            if (json_is_real_char(*parser->ptr)) {
                 json_parser_skip(parser, 1);
-            } else if (json_is_boundary((unsigned char)*parser->ptr)) {
+            } else if (json_is_boundary(*parser->ptr)) {
                 break;
             } else {
-                json_set_error_invalid_character((unsigned char)*parser->ptr,
-                                                 " in real");
+                json_set_error_invalid_character(*parser->ptr, " in real");
                 return -1;
             }
         }
@@ -550,32 +526,32 @@ json_parse_literal(struct json_parser *parser, struct json_value **pvalue) {
 }
 
 static bool
-json_is_ws(int c) {
+json_is_ws(char c) {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
 
 static bool
-json_is_boundary(int c) {
+json_is_boundary(char c) {
     return json_is_ws(c) || c == ',' || c == ']' || c == ':' || c == '}';
 }
 
 static bool
-json_is_number_first_char(int c) {
+json_is_number_first_char(char c) {
     return c == '-' || (c >= '0' && c <= '9');
 }
 
 static bool
-json_is_number_char(int c) {
+json_is_number_char(char c) {
     return json_is_real_char(c);
 }
 
 static bool
-json_is_integer_char(int c) {
+json_is_integer_char(char c) {
     return (c >= '0' && c <= '9') || c == '-';
 }
 
 static bool
-json_is_real_char(int c) {
+json_is_real_char(char c) {
     return (c >= '0' && c <= '9')
         || c == '-' || c == '+'
         || c == '.'
@@ -713,11 +689,10 @@ static int
 json_decode_utf8_character(const char *str, uint32_t *pcodepoint) {
     int d1, d2, d3, d4;
 
-#define JSON_READ_HEX_DIGIT(var_, c_)                              \
-    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) { \
-        json_set_error_invalid_character((unsigned char)c_,        \
-                                         " in unicode sequence");  \
-        return -1;                                                 \
+#define JSON_READ_HEX_DIGIT(var_, c_)                                 \
+    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {    \
+        json_set_error_invalid_character(c_, " in unicode sequence"); \
+        return -1;                                                    \
     }
 
     JSON_READ_HEX_DIGIT(d1, str[0]);
@@ -735,11 +710,10 @@ json_decode_utf16_surrogate_pair(const char *str, uint32_t *pcodepoint) {
     int d1, d2, d3, d4;
     uint32_t hi, lo;
 
-#define JSON_READ_HEX_DIGIT(var_, c_)                              \
-    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) { \
-        json_set_error_invalid_character((unsigned char)c_,        \
-                                         " in unicode sequence");  \
-        return -1;                                                 \
+#define JSON_READ_HEX_DIGIT(var_, c_)                                 \
+    if ((var_ = json_decode_hex_digit((unsigned char)c_)) == -1) {    \
+        json_set_error_invalid_character(c_, " in unicode sequence"); \
+        return -1;                                                    \
     }
 
     JSON_READ_HEX_DIGIT(d1, str[0]);

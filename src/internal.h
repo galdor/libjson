@@ -33,7 +33,7 @@
 /* ------------------------------------------------------------------------
  *  Errors
  * ------------------------------------------------------------------------ */
-void json_set_error_invalid_character(unsigned char, const char *fmt, ...)
+void json_set_error_invalid_character(char, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
 /* ------------------------------------------------------------------------
