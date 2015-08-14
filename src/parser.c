@@ -426,7 +426,7 @@ json_parse_value_number(struct json_parser *parser,
         errno = 0;
         real = strtod(tmp, NULL);
         if (errno) {
-            c_set_error("%s", strerror(errno));
+            c_set_error("cannot parse real: %s", strerror(errno));
             return -1;
         }
 
