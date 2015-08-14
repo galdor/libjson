@@ -1501,6 +1501,11 @@ json_schema_parse(const char *data, size_t sz) {
 }
 
 struct json_schema *
+json_schema_parse_string(const char *string) {
+    return json_schema_parse(string, strlen(string));
+}
+
+struct json_schema *
 json_schema_parse_fd(int fd) {
     struct json_schema *schema;
     struct c_buffer *buf;

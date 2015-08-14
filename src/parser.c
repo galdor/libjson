@@ -68,6 +68,11 @@ json_parse(const char *buf, size_t sz, uint32_t options) {
 }
 
 struct json_value *
+json_parse_string(const char *string, uint32_t options) {
+    return json_parse(string, strlen(string), options);
+}
+
+struct json_value *
 json_parse_fd(int fd, uint32_t options) {
     struct json_value *value;
     struct c_buffer *buf;

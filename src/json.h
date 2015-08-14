@@ -46,6 +46,7 @@ enum json_parse_option {
 };
 
 struct json_value *json_parse(const char *, size_t, uint32_t);
+struct json_value *json_parse_string(const char *, uint32_t);
 struct json_value *json_parse_fd(int, uint32_t);
 struct json_value *json_parse_file(const char *, uint32_t);
 
@@ -127,6 +128,7 @@ struct json_value *json_null_new(void);
 
 /* JSON schema */
 struct json_schema *json_schema_parse(const char *, size_t);
+struct json_schema *json_schema_parse_string(const char *);
 struct json_schema *json_schema_parse_fd(int);
 struct json_schema *json_schema_parse_file(const char *);
 void json_schema_delete(struct json_schema *);
