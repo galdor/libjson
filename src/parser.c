@@ -30,11 +30,11 @@ static void json_parser_skip(struct json_parser *, size_t);
 static void json_parser_skip_ws(struct json_parser *);
 
 static int json_parse_value(struct json_parser *, struct json_value **);
-static int json_parse_object(struct json_parser *, struct json_value **);
-static int json_parse_array(struct json_parser *, struct json_value **);
-static int json_parse_number(struct json_parser *, struct json_value **);
-static int json_parse_string(struct json_parser *, struct json_value **);
-static int json_parse_literal(struct json_parser *, struct json_value **);
+static int json_parse_value_object(struct json_parser *, struct json_value **);
+static int json_parse_value_array(struct json_parser *, struct json_value **);
+static int json_parse_value_number(struct json_parser *, struct json_value **);
+static int json_parse_value_string(struct json_parser *, struct json_value **);
+static int json_parse_value_literal(struct json_parser *, struct json_value **);
 
 static bool json_is_ws(char);
 static bool json_is_boundary(char);
@@ -139,16 +139,16 @@ json_parse_value(struct json_parser *parser, struct json_value **pvalue) {
     json_parser_skip_ws(parser);
 
     if (*parser->ptr == '{') {
-        return json_parse_object(parser, pvalue);
+        return json_parse_value_object(parser, pvalue);
     } else if (*parser->ptr == '[') {
-        return json_parse_array(parser, pvalue);
+        return json_parse_value_array(parser, pvalue);
     } else if (*parser->ptr == '"') {
-        return json_parse_string(parser, pvalue);
+        return json_parse_value_string(parser, pvalue);
     } else if (*parser->ptr == 't' || *parser->ptr == 'f'
             || *parser->ptr == 'n') {
-        return json_parse_literal(parser, pvalue);
+        return json_parse_value_literal(parser, pvalue);
     } else if (json_is_number_first_char(*parser->ptr)) {
-        return json_parse_number(parser, pvalue);
+        return json_parse_value_number(parser, pvalue);
     } else {
         json_set_error_invalid_character(*parser->ptr, " ");
         return -1;
@@ -156,7 +156,8 @@ json_parse_value(struct json_parser *parser, struct json_value **pvalue) {
 }
 
 static int
-json_parse_object(struct json_parser *parser, struct json_value **pvalue) {
+json_parse_value_object(struct json_parser *parser,
+                        struct json_value **pvalue) {
     struct json_value *object_value;
 
     object_value = json_object_new();
@@ -268,7 +269,7 @@ error:
 }
 
 static int
-json_parse_array(struct json_parser *parser, struct json_value **pvalue) {
+json_parse_value_array(struct json_parser *parser, struct json_value **pvalue) {
     struct json_value *value;
 
     value = json_array_new();
@@ -337,7 +338,8 @@ error:
 }
 
 static int
-json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
+json_parse_value_number(struct json_parser *parser,
+                        struct json_value **pvalue) {
     struct json_value *value;
     const char *ptr, *start;
     size_t len, toklen;
@@ -437,7 +439,8 @@ json_parse_number(struct json_parser *parser, struct json_value **pvalue) {
 }
 
 static int
-json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
+json_parse_value_string(struct json_parser *parser,
+                        struct json_value **pvalue) {
     struct json_value *value;
     const char *start;
     size_t toklen;
@@ -488,7 +491,8 @@ json_parse_string(struct json_parser *parser, struct json_value **pvalue) {
 }
 
 static int
-json_parse_literal(struct json_parser *parser, struct json_value **pvalue) {
+json_parse_value_literal(struct json_parser *parser,
+                         struct json_value **pvalue) {
     struct json_value *value;
     size_t length;
 
