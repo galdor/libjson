@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "json.h"
+#include "../src/json.h"
 
 static void json_die(const char *, ...)
     __attribute__ ((format(printf, 1, 2), noreturn));

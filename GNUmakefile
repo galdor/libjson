@@ -6,11 +6,12 @@ bindir= $(prefix)/bin
 
 CC= clang
 
+CFLAGS+= $(cflags)
 CFLAGS+= -std=c99
 CFLAGS+= -Wall -Wextra -Werror -Wsign-conversion
 CFLAGS+= -Wno-unused-parameter -Wno-unused-function
 
-LDFLAGS=
+LDFLAGS+= $(ldflags)
 
 LDLIBS= -lm -lpcre
 
@@ -54,7 +55,6 @@ tests_SRC= $(wildcard tests/*.c)
 tests_OBJ= $(subst .c,.o,$(tests_SRC))
 tests_BIN= $(subst .o,,$(tests_OBJ))
 
-$(tests_BIN): CFLAGS+= -Isrc
 $(tests_BIN): LDFLAGS+= -L.
 $(tests_BIN): LDLIBS+= -ljson -lcore -lutest
 
@@ -63,7 +63,6 @@ utils_SRC= $(wildcard utils/*.c)
 utils_OBJ= $(subst .c,.o,$(utils_SRC))
 utils_BIN= $(subst .o,,$(utils_OBJ))
 
-$(utils_BIN): CFLAGS+= -Isrc
 $(utils_BIN): LDFLAGS+= -L.
 $(utils_BIN): LDLIBS+= -ljson -lcore
 

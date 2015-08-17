@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "json.h"
+#include "../src/json.h"
 #include "tests.h"
 
 TEST(arrays) {
