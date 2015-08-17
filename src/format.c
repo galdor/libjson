@@ -413,20 +413,15 @@ json_format_null(struct c_buffer *buf, struct json_format_ctx *ctx) {
 
 static int
 json_format_indent(struct c_buffer *buf, struct json_format_ctx *ctx) {
-    char *tmp;
+    char *ptr;
 
-    if (ctx->indent == 0) {
-        return 0;
-    } else if (ctx->indent > 0xffff) {
-        c_set_error("cannot indent text: nesting depth too high");
+    ptr = c_buffer_reserve(buf, ctx->indent);
+    if (!ptr)
         return -1;
-    }
 
-    tmp = alloca(ctx->indent);
-    memset(tmp, ' ', ctx->indent);
+    memset(ptr, ' ', ctx->indent);
 
-    if (c_buffer_add(buf, tmp, ctx->indent) == -1)
-        return -1;
+    c_buffer_increase_length(buf, ctx->indent);
 
     return 0;
 }

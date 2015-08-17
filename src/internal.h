@@ -17,7 +17,6 @@
 #ifndef LIBJSON_INTERNAL_H
 #define LIBJSON_INTERNAL_H
 
-#include <alloca.h>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
