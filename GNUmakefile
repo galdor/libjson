@@ -25,6 +25,12 @@ ifeq ($(platform), Linux)
 	CFLAGS+= -D_POSIX_C_SOURCE=200809L
 endif
 
+ifeq ($(platform), FreeBSD)
+	CFLAGS+= -DJSON_PLATFORM_FREEBSD
+	CFLAGS+= -I/usr/local/include
+	LDFLAGS+= -L/usr/local/lib
+endif
+
 # Debug
 debug=0
 ifeq ($(debug), 1)
