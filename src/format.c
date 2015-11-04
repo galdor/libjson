@@ -292,7 +292,7 @@ json_format_real(double real, struct c_buffer *buf,
                  struct json_format_ctx *ctx) {
     JSON_SET_ANSI_COLOR(ctx, buf, JSON_ANSI_COLOR_RED);
 
-    if (c_buffer_add_printf(buf, "%.17g", real) == -1) {
+    if (c_buffer_add_printf(buf, "%.17f", real) == -1) {
         JSON_CLEAR_ANSI_COLOR(ctx, buf);
         return -1;
     }
