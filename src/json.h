@@ -117,6 +117,9 @@ struct json_value *json_string_new(const char *);
 struct json_value *json_string_new2(const char *, size_t);
 struct json_value *json_string_new_nocopy(char *);
 struct json_value *json_string_new_nocopy2(char *, size_t);
+struct json_value *json_string_new_vprintf(const char *, va_list);
+struct json_value *json_string_new_printf(const char *, ...)
+    __attribute__ ((format(printf, 1, 2)));
 const char *json_string_value(const struct json_value *);
 size_t json_string_length(const struct json_value *);
 char *json_string_dup(const struct json_value *);

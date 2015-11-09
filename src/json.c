@@ -715,6 +715,30 @@ json_string_new_nocopy2(char *string, size_t length) {
     return value;
 }
 
+struct json_value *
+json_string_new_vprintf(const char *fmt, va_list ap) {
+    char *string;
+    int size;
+
+    size = c_vasprintf(&string, fmt, ap);
+    if (size == -1)
+        return NULL;
+
+    return json_string_new_nocopy2(string, (size_t)size);
+}
+
+struct json_value *
+json_string_new_printf(const char *fmt, ...) {
+    struct json_value *json;
+    va_list ap;
+
+    va_start(ap, fmt);
+    json = json_string_new_vprintf(fmt, ap);
+    va_end(ap);
+
+    return json;
+}
+
 const char *
 json_string_value(const struct json_value *value) {
     return value->u.string.ptr;
