@@ -450,6 +450,22 @@ json_object_remove_member(struct json_value *object, const char *key) {
     json_object_remove_member2(object, key, strlen(key));
 }
 
+void
+json_object_merge(struct json_value *obj1, const struct json_value *obj2) {
+    assert(obj1->type == JSON_OBJECT);
+    assert(obj2->type == JSON_OBJECT);
+
+    for (size_t i = 0; i < json_object_nb_members(obj2); i++) {
+        const char *key;
+        struct json_value *value2;
+
+        key = json_object_nth_member(obj2, i, &value2);
+
+        if (value2)
+            json_object_set_member(obj1, key, json_value_clone(value2));
+    }
+}
+
 int
 json_object_set_member2(struct json_value *value, const char *key, size_t len,
                         struct json_value *val) {

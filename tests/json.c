@@ -331,6 +331,52 @@ TEST(object_remove_member) {
     json_value_delete(value);
 }
 
+TEST(object_merge) {
+    struct json_value *obj1, *obj2;
+
+    /* merge({}, {}) => {} */
+    obj1 = json_object_new();
+    obj2 = json_object_new();
+    json_object_merge(obj1, obj2);
+    TEST_UINT_EQ(json_object_nb_members(obj1), 0);
+    json_value_delete(obj1);
+    json_value_delete(obj2);
+
+    /* merge({a: 1}, {a: 1}) => {a: 1} */
+    obj1 = json_object_new();
+    json_object_add_member(obj1, "a", json_integer_new(1));
+    obj2 = json_object_new();
+    json_object_add_member(obj2, "a", json_integer_new(1));
+    json_object_merge(obj1, obj2);
+    TEST_UINT_EQ(json_object_nb_members(obj1), 1);
+    JSONT_INTEGER_EQ(json_object_member(obj1, "a"), 1);
+    json_value_delete(obj1);
+    json_value_delete(obj2);
+
+    /* merge({a: 1}, {a: 2}) => {a: 2} */
+    obj1 = json_object_new();
+    json_object_add_member(obj1, "a", json_integer_new(1));
+    obj2 = json_object_new();
+    json_object_add_member(obj2, "a", json_integer_new(2));
+    json_object_merge(obj1, obj2);
+    TEST_UINT_EQ(json_object_nb_members(obj1), 1);
+    JSONT_INTEGER_EQ(json_object_member(obj1, "a"), 2);
+    json_value_delete(obj1);
+    json_value_delete(obj2);
+
+    /* merge({a: 1}, {b: 2}) => {a: 1, b: 2} */
+    obj1 = json_object_new();
+    json_object_add_member(obj1, "a", json_integer_new(1));
+    obj2 = json_object_new();
+    json_object_add_member(obj2, "b", json_integer_new(2));
+    json_object_merge(obj1, obj2);
+    TEST_UINT_EQ(json_object_nb_members(obj1), 2);
+    JSONT_INTEGER_EQ(json_object_member(obj1, "a"), 1);
+    JSONT_INTEGER_EQ(json_object_member(obj1, "b"), 2);
+    json_value_delete(obj1);
+    json_value_delete(obj2);
+}
+
 TEST(invalid) {
     JSONT_IS_INVALID("", JSON_PARSE_DEFAULT);
 }
@@ -583,6 +629,7 @@ main(int argc, char **argv) {
     TEST_RUN(suite, objects);
     TEST_RUN(suite, object_iterators);
     TEST_RUN(suite, object_remove_member);
+    TEST_RUN(suite, object_merge);
 
     TEST_RUN(suite, invalid);
     TEST_RUN(suite, invalid_arrays);
