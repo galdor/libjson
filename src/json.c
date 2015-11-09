@@ -394,6 +394,44 @@ json_object_add_member(struct json_value *object, const char *key,
     return json_object_add_member2(object, key, strlen(key), value);
 }
 
+int
+json_object_set_member2(struct json_value *value, const char *key, size_t len,
+                        struct json_value *val) {
+    struct json_object *object;
+    struct json_object_member *member;
+    bool found;
+
+    object = &value->u.object;
+
+    member = NULL;
+    found = false;
+
+    for (size_t i = 0; i < object->nb_members; i++) {
+        member = object->members + i;
+
+        if (member->key->u.string.len != len)
+            continue;
+
+        if (memcmp(member->key->u.string.ptr, key, len) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+        return json_object_add_member2(value, key, len, val);
+
+    json_value_delete(member->value);
+    member->value = val;
+    return 1;
+}
+
+int
+json_object_set_member(struct json_value *value, const char *key,
+                       struct json_value *val) {
+    return json_object_set_member2(value, key, strlen(key), val);
+}
+
 void
 json_object_remove_member2(struct json_value *object_value,
                            const char *key, size_t sz) {
@@ -464,44 +502,6 @@ json_object_merge(struct json_value *obj1, const struct json_value *obj2) {
         if (value2)
             json_object_set_member(obj1, key, json_value_clone(value2));
     }
-}
-
-int
-json_object_set_member2(struct json_value *value, const char *key, size_t len,
-                        struct json_value *val) {
-    struct json_object *object;
-    struct json_object_member *member;
-    bool found;
-
-    object = &value->u.object;
-
-    member = NULL;
-    found = false;
-
-    for (size_t i = 0; i < object->nb_members; i++) {
-        member = object->members + i;
-
-        if (member->key->u.string.len != len)
-            continue;
-
-        if (memcmp(member->key->u.string.ptr, key, len) == 0) {
-            found = true;
-            break;
-        }
-    }
-
-    if (!found)
-        return json_object_add_member2(value, key, len, val);
-
-    json_value_delete(member->value);
-    member->value = val;
-    return 1;
-}
-
-int
-json_object_set_member(struct json_value *value, const char *key,
-                       struct json_value *val) {
-    return json_object_set_member2(value, key, strlen(key), val);
 }
 
 struct json_object_iterator *
