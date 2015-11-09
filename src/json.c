@@ -409,37 +409,37 @@ json_object_remove_member2(struct json_value *object_value,
 
         if (member->key->u.string.len != sz)
             continue;
+        if (memcmp(member->key->u.string.ptr, key, sz) != 0)
+            continue;
 
-        if (memcmp(member->key->u.string.ptr, key, sz) == 0) {
-            removed_index = member->index;
+        removed_index = member->index;
 
-            json_value_delete(member->key);
-            json_value_delete(member->value);
+        json_value_delete(member->key);
+        json_value_delete(member->value);
 
-            if (i == object->nb_members - 1) {
-                member->key = NULL;
-                member->value = NULL;
-            } else {
-                size_t member_sz;
+        if (i == object->nb_members - 1) {
+            member->key = NULL;
+            member->value = NULL;
+        } else {
+            size_t member_sz;
 
-                member_sz = sizeof(struct json_object_member);
-                memmove(object->members + i, object->members + i + 1,
-                        (object->nb_members - i - 1) * member_sz);
-            }
+            member_sz = sizeof(struct json_object_member);
+            memmove(object->members + i, object->members + i + 1,
+                    (object->nb_members - i - 1) * member_sz);
+        }
 
-            object->nb_members--;
-            object->sort_mode = JSON_OBJECT_UNSORTED;
+        object->nb_members--;
+        object->sort_mode = JSON_OBJECT_UNSORTED;
 
-            /* Renumber to avoid holes in the index sequence */
-            if (i == object->nb_members) {
-                for (size_t j = 0; j < object->nb_members; j++) {
-                    struct json_object_member *member2;
+        /* Renumber to avoid holes in the index sequence */
+        if (i == object->nb_members) {
+            for (size_t j = 0; j < object->nb_members; j++) {
+                struct json_object_member *member2;
 
-                    member2 = object->members + j;
+                member2 = object->members + j;
 
-                    if (member2->index > removed_index)
-                        member2->index--;
-                }
+                if (member2->index > removed_index)
+                    member2->index--;
             }
         }
     }
